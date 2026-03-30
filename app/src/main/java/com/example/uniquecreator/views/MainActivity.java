@@ -155,6 +155,36 @@ public class MainActivity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> logoPickerLauncher;
     private SharedPrefHelper prefHelper;
 
+    // ═══════════════════════════════════════════════════════════════
+// REACTION FACE SECTION
+// ═══════════════════════════════════════════════════════════════
+    private LinearLayout reactionFaceHeader, reactionFaceContent;
+    private TextView reactionFaceToggle, reactionFaceSummary;
+    private boolean reactionFaceExpanded = false;
+
+    // Reaction Face Controls
+    private SwitchCompat swReactionFace;
+    private LinearLayout faceVideoPickerArea, reactionFaceSection;
+    private FrameLayout faceVideoDropZone;
+    private LinearLayout faceVideoInfoLayout;
+    private ImageView faceVideoThumbnail;
+    private TextView faceVideoName, faceVideoDetail, faceVideoSizeValue, faceCornerValue;
+    private ImageButton btnRemoveFaceVideo;
+    private LinearLayout facePositionSection, faceSizeSection, faceCornerSection;
+    private Slider slFaceVideoSize, slFaceCornerRadius;
+
+    // Position chips (manual handling since we excluded center)
+    private com.google.android.material.chip.Chip chipFacePosTopLeft, chipFacePosTopRight;
+    private com.google.android.material.chip.Chip chipFacePosBottomLeft, chipFacePosBottomRight;
+
+    // State
+    private Uri selectedFaceVideoUri;
+    private Bitmap faceVideoThumbnailBitmap;
+    private int selectedFacePosition = 0; // 0=TopLeft, 1=TopRight, 2=BottomLeft, 3=BottomRight
+
+    // Launcher
+    private ActivityResultLauncher<Intent> faceVideoPickerLauncher;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -203,6 +233,19 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
         );
+
+        // Face Video Picker
+        faceVideoPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        selectedFaceVideoUri = result.getData().getData();
+                        if (selectedFaceVideoUri != null) {
+                            loadFaceVideoInfo();
+                        }
+                    }
+                }
+        );
     }
 
     @Override
@@ -211,6 +254,11 @@ public class MainActivity extends AppCompatActivity {
         if (videoThumbnail != null && !videoThumbnail.isRecycled()) {
             videoThumbnail.recycle();
             videoThumbnail = null;
+        }
+
+        if (faceVideoThumbnailBitmap != null && !faceVideoThumbnailBitmap.isRecycled()) {
+            faceVideoThumbnailBitmap.recycle();
+            faceVideoThumbnailBitmap = null;
         }
 
         WatermarkConfig.sharedLogoBitmap = null;
@@ -327,6 +375,38 @@ public class MainActivity extends AppCompatActivity {
         btnLogoTopRight = findViewById(R.id.btnLogoTopRight);
         btnLogoBottomLeft = findViewById(R.id.btnLogoBottomLeft);
         btnLogoBottomRight = findViewById(R.id.btnLogoBottomRight);
+
+        // ═══════════════════════════════════════════════════════════════
+// REACTION FACE SECTION
+// ═══════════════════════════════════════════════════════════════
+        reactionFaceHeader = findViewById(R.id.reactionFaceHeader);
+        reactionFaceContent = findViewById(R.id.reactionFaceContent);
+        reactionFaceToggle = findViewById(R.id.reactionFaceToggle);
+        reactionFaceSummary = findViewById(R.id.reactionFaceSummary);
+
+// Reaction Face Controls
+        swReactionFace = findViewById(R.id.swReactionFace);
+        faceVideoPickerArea = findViewById(R.id.faceVideoPickerArea);
+        reactionFaceSection = findViewById(R.id.reactionFaceSection);
+        faceVideoDropZone = findViewById(R.id.faceVideoDropZone);
+        faceVideoInfoLayout = findViewById(R.id.faceVideoInfoLayout);
+        faceVideoThumbnail = findViewById(R.id.faceVideoThumbnail);
+        faceVideoName = findViewById(R.id.faceVideoName);
+        faceVideoDetail = findViewById(R.id.faceVideoDetail);
+        faceVideoSizeValue = findViewById(R.id.faceVideoSizeValue);
+        faceCornerValue = findViewById(R.id.faceCornerValue);
+        btnRemoveFaceVideo = findViewById(R.id.btnRemoveFaceVideo);
+        facePositionSection = findViewById(R.id.facePositionSection);
+        faceSizeSection = findViewById(R.id.faceSizeSection);
+        faceCornerSection = findViewById(R.id.faceCornerSection);
+        slFaceVideoSize = findViewById(R.id.slFaceVideoSize);
+        slFaceCornerRadius = findViewById(R.id.slFaceCornerRadius);
+
+// Position chips
+        chipFacePosTopLeft = findViewById(R.id.chipFacePosTopLeft);
+        chipFacePosTopRight = findViewById(R.id.chipFacePosTopRight);
+        chipFacePosBottomLeft = findViewById(R.id.chipFacePosBottomLeft);
+        chipFacePosBottomRight = findViewById(R.id.chipFacePosBottomRight);
     }
 
     private void initTransformViews() {
@@ -453,9 +533,12 @@ public class MainActivity extends AppCompatActivity {
 
         // Collapsible section toggles
         if (outputHeader != null) outputHeader.setOnClickListener(v -> toggleOutputSection());
-        if (transformHeader != null) transformHeader.setOnClickListener(v -> toggleTransformSection());
-        if (watermarkHeader != null) watermarkHeader.setOnClickListener(v -> toggleWatermarkSection());
-        if (logoRemoverHeader != null) logoRemoverHeader.setOnClickListener(v -> toggleLogoRemoverSection());
+        if (transformHeader != null)
+            transformHeader.setOnClickListener(v -> toggleTransformSection());
+        if (watermarkHeader != null)
+            watermarkHeader.setOnClickListener(v -> toggleWatermarkSection());
+        if (logoRemoverHeader != null)
+            logoRemoverHeader.setOnClickListener(v -> toggleLogoRemoverSection());
 
         // Quick actions
         if (btnEnableAll != null) btnEnableAll.setOnClickListener(v -> {
@@ -504,8 +587,10 @@ public class MainActivity extends AppCompatActivity {
                 boolean showLogo = (checkedId == R.id.chipOverlayLogo || checkedId == R.id.chipOverlayBoth);
                 boolean showText = (checkedId == R.id.chipOverlayText || checkedId == R.id.chipOverlayBoth);
 
-                if (logoSection != null) logoSection.setVisibility(showLogo ? View.VISIBLE : View.GONE);
-                if (textSection != null) textSection.setVisibility(showText ? View.VISIBLE : View.GONE);
+                if (logoSection != null)
+                    logoSection.setVisibility(showLogo ? View.VISIBLE : View.GONE);
+                if (textSection != null)
+                    textSection.setVisibility(showText ? View.VISIBLE : View.GONE);
 
                 if (checkedId == R.id.chipOverlayNone) wm.mode = WatermarkConfig.Mode.NONE;
                 else if (checkedId == R.id.chipOverlayLogo) wm.mode = WatermarkConfig.Mode.LOGO;
@@ -523,31 +608,44 @@ public class MainActivity extends AppCompatActivity {
         // Logo position
         if (logoPosGroup != null) {
             logoPosGroup.setOnCheckedChangeListener((group, checkedId) -> {
-                if (checkedId == R.id.chipLogoPosTopLeft) wm.logoPosition = WatermarkConfig.Position.TOP_LEFT;
-                else if (checkedId == R.id.chipLogoPosTopRight) wm.logoPosition = WatermarkConfig.Position.TOP_RIGHT;
-                else if (checkedId == R.id.chipLogoPosBottomLeft) wm.logoPosition = WatermarkConfig.Position.BOTTOM_LEFT;
-                else if (checkedId == R.id.chipLogoPosBottomRight) wm.logoPosition = WatermarkConfig.Position.BOTTOM_RIGHT;
-                else if (checkedId == R.id.chipLogoPosCenter) wm.logoPosition = WatermarkConfig.Position.CENTER;
+                if (checkedId == R.id.chipLogoPosTopLeft)
+                    wm.logoPosition = WatermarkConfig.Position.TOP_LEFT;
+                else if (checkedId == R.id.chipLogoPosTopRight)
+                    wm.logoPosition = WatermarkConfig.Position.TOP_RIGHT;
+                else if (checkedId == R.id.chipLogoPosBottomLeft)
+                    wm.logoPosition = WatermarkConfig.Position.BOTTOM_LEFT;
+                else if (checkedId == R.id.chipLogoPosBottomRight)
+                    wm.logoPosition = WatermarkConfig.Position.BOTTOM_RIGHT;
+                else if (checkedId == R.id.chipLogoPosCenter)
+                    wm.logoPosition = WatermarkConfig.Position.CENTER;
             });
         }
 
         // Text position
         if (textPosGroup != null) {
             textPosGroup.setOnCheckedChangeListener((group, checkedId) -> {
-                if (checkedId == R.id.chipTextPosTopLeft) wm.textPosition = WatermarkConfig.Position.TOP_LEFT;
-                else if (checkedId == R.id.chipTextPosTopRight) wm.textPosition = WatermarkConfig.Position.TOP_RIGHT;
-                else if (checkedId == R.id.chipTextPosBottomLeft) wm.textPosition = WatermarkConfig.Position.BOTTOM_LEFT;
-                else if (checkedId == R.id.chipTextPosBottomRight) wm.textPosition = WatermarkConfig.Position.BOTTOM_RIGHT;
-                else if (checkedId == R.id.chipTextPosCenter) wm.textPosition = WatermarkConfig.Position.CENTER;
+                if (checkedId == R.id.chipTextPosTopLeft)
+                    wm.textPosition = WatermarkConfig.Position.TOP_LEFT;
+                else if (checkedId == R.id.chipTextPosTopRight)
+                    wm.textPosition = WatermarkConfig.Position.TOP_RIGHT;
+                else if (checkedId == R.id.chipTextPosBottomLeft)
+                    wm.textPosition = WatermarkConfig.Position.BOTTOM_LEFT;
+                else if (checkedId == R.id.chipTextPosBottomRight)
+                    wm.textPosition = WatermarkConfig.Position.BOTTOM_RIGHT;
+                else if (checkedId == R.id.chipTextPosCenter)
+                    wm.textPosition = WatermarkConfig.Position.CENTER;
             });
         }
 
         // Text style
         if (wmStyleGroup != null) {
             wmStyleGroup.setOnCheckedChangeListener((group, checkedId) -> {
-                if (checkedId == R.id.chipStyleNormal) wm.textStyle = WatermarkConfig.TextStyle.NORMAL;
-                else if (checkedId == R.id.chipStyleBold) wm.textStyle = WatermarkConfig.TextStyle.BOLD;
-                else if (checkedId == R.id.chipStyleOutline) wm.textStyle = WatermarkConfig.TextStyle.OUTLINE;
+                if (checkedId == R.id.chipStyleNormal)
+                    wm.textStyle = WatermarkConfig.TextStyle.NORMAL;
+                else if (checkedId == R.id.chipStyleBold)
+                    wm.textStyle = WatermarkConfig.TextStyle.BOLD;
+                else if (checkedId == R.id.chipStyleOutline)
+                    wm.textStyle = WatermarkConfig.TextStyle.OUTLINE;
             });
         }
 
@@ -615,6 +713,81 @@ public class MainActivity extends AppCompatActivity {
             if (swManualLogoRemover != null && !swManualLogoRemover.isChecked()) return;
             setLogoRemovalPosition(1720, 930);
         });
+
+        // ═══════════════════════════════════════════════════════════════
+// REACTION FACE LISTENERS
+// ═══════════════════════════════════════════════════════════════
+        if (reactionFaceHeader != null) {
+            reactionFaceHeader.setOnClickListener(v -> toggleReactionFaceSection());
+        }
+
+// Main switch
+        if (swReactionFace != null) {
+            swReactionFace.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                applyReactionFaceEnabled(isChecked);
+                updateReactionFaceSummary();
+            });
+            applyReactionFaceEnabled(swReactionFace.isChecked());
+        }
+
+// Face video picker
+        if (faceVideoDropZone != null) {
+            faceVideoDropZone.setOnClickListener(v -> {
+                if (swReactionFace != null && swReactionFace.isChecked()) {
+                    openFaceVideoPicker();
+                } else {
+                    Toast.makeText(this, "প্রথমে Reaction Face চালু করুন", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+// Remove face video
+        if (btnRemoveFaceVideo != null) {
+            btnRemoveFaceVideo.setOnClickListener(v -> removeFaceVideo());
+        }
+
+// Position chips (manual single selection)
+        View.OnClickListener positionClickListener = v -> {
+            // Uncheck all first
+            if (chipFacePosTopLeft != null) chipFacePosTopLeft.setChecked(false);
+            if (chipFacePosTopRight != null) chipFacePosTopRight.setChecked(false);
+            if (chipFacePosBottomLeft != null) chipFacePosBottomLeft.setChecked(false);
+            if (chipFacePosBottomRight != null) chipFacePosBottomRight.setChecked(false);
+
+            // Check clicked one
+            ((com.google.android.material.chip.Chip) v).setChecked(true);
+
+            // Update position
+            int id = v.getId();
+            if (id == R.id.chipFacePosTopLeft) selectedFacePosition = 0;
+            else if (id == R.id.chipFacePosTopRight) selectedFacePosition = 1;
+            else if (id == R.id.chipFacePosBottomLeft) selectedFacePosition = 2;
+            else if (id == R.id.chipFacePosBottomRight) selectedFacePosition = 3;
+
+            updateReactionFaceSummary();
+        };
+
+        if (chipFacePosTopLeft != null) chipFacePosTopLeft.setOnClickListener(positionClickListener);
+        if (chipFacePosTopRight != null) chipFacePosTopRight.setOnClickListener(positionClickListener);
+        if (chipFacePosBottomLeft != null) chipFacePosBottomLeft.setOnClickListener(positionClickListener);
+        if (chipFacePosBottomRight != null) chipFacePosBottomRight.setOnClickListener(positionClickListener);
+
+// Size slider
+        if (slFaceVideoSize != null && faceVideoSizeValue != null) {
+            faceVideoSizeValue.setText((int) slFaceVideoSize.getValue() + "%");
+            slFaceVideoSize.addOnChangeListener((slider, value, fromUser) -> {
+                faceVideoSizeValue.setText((int) value + "%");
+                updateReactionFaceSummary();
+            });
+        }
+
+// Corner radius slider
+        if (slFaceCornerRadius != null && faceCornerValue != null) {
+            faceCornerValue.setText((int) slFaceCornerRadius.getValue() + "%");
+            slFaceCornerRadius.addOnChangeListener((slider, value, fromUser) -> {
+                faceCornerValue.setText((int) value + "%");
+            });
+        }
 
         setupSwitchSliderPairs();
         setupSliderValueListeners();
@@ -786,8 +959,8 @@ public class MainActivity extends AppCompatActivity {
         setSliderInteractive(slRemovalWidth, enabled);
         setSliderInteractive(slRemovalHeight, enabled);
 
-        if (btnLogoTopLeft != null)    btnLogoTopLeft.setAlpha(enabled ? 1.0f : 0.4f);
-        if (btnLogoTopRight != null)   btnLogoTopRight.setAlpha(enabled ? 1.0f : 0.4f);
+        if (btnLogoTopLeft != null) btnLogoTopLeft.setAlpha(enabled ? 1.0f : 0.4f);
+        if (btnLogoTopRight != null) btnLogoTopRight.setAlpha(enabled ? 1.0f : 0.4f);
         if (btnLogoBottomLeft != null) btnLogoBottomLeft.setAlpha(enabled ? 1.0f : 0.4f);
         if (btnLogoBottomRight != null) btnLogoBottomRight.setAlpha(enabled ? 1.0f : 0.4f);
     }
@@ -1012,19 +1185,37 @@ public class MainActivity extends AppCompatActivity {
 
         String resText;
         switch (selectedResolution) {
-            case "1080": resText = "1080p HD"; break;
-            case "720":  resText = "720p"; break;
-            case "480":  resText = "480p"; break;
-            default:     resText = "অরিজিনাল রেজুলেশন"; break;
+            case "1080":
+                resText = "1080p HD";
+                break;
+            case "720":
+                resText = "720p";
+                break;
+            case "480":
+                resText = "480p";
+                break;
+            default:
+                resText = "অরিজিনাল রেজুলেশন";
+                break;
         }
 
         String ratioText;
         switch (selectedRatio) {
-            case "16:9": ratioText = "16:9 YouTube"; break;
-            case "9:16": ratioText = "9:16 Reels"; break;
-            case "1:1":  ratioText = "1:1 Square"; break;
-            case "4:3":  ratioText = "4:3"; break;
-            default:     ratioText = "অরিজিনাল রেশিও"; break;
+            case "16:9":
+                ratioText = "16:9 YouTube";
+                break;
+            case "9:16":
+                ratioText = "9:16 Reels";
+                break;
+            case "1:1":
+                ratioText = "1:1 Square";
+                break;
+            case "4:3":
+                ratioText = "4:3";
+                break;
+            default:
+                ratioText = "অরিজিনাল রেশিও";
+                break;
         }
 
         outputSummary.setText(resText + " · " + ratioText);
@@ -1082,6 +1273,12 @@ public class MainActivity extends AppCompatActivity {
             boolean manualEnabled = swManualLogoRemover != null && swManualLogoRemover.isChecked();
             if (manualEnabled) {
                 features += " + Logo Remove";
+            }
+
+            // ★ Add Reaction Face
+            boolean reactionEnabled = swReactionFace != null && swReactionFace.isChecked() && selectedFaceVideoUri != null;
+            if (reactionEnabled) {
+                features += " + Reaction";
             }
 
             processSummary.setText(features + " · " + resText + " রেজুলেশন");
@@ -1218,7 +1415,10 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "Error getting metadata", e);
             if (fileDetailText != null) fileDetailText.setText(formatFileSize(fileSize));
         } finally {
-            if (retriever != null) try { retriever.release(); } catch (Exception ignored) {}
+            if (retriever != null) try {
+                retriever.release();
+            } catch (Exception ignored) {
+            }
         }
     }
 
@@ -1367,12 +1567,15 @@ public class MainActivity extends AppCompatActivity {
         // ═══════════════════════════════════════════════════════════════
         ts.useManualRegion = swManualLogoRemover != null && swManualLogoRemover.isChecked();
         if (ts.useManualRegion) {
-            ts.manualX      = slRemovalX      != null ? (int) slRemovalX.getValue()      : 0;
-            ts.manualY      = slRemovalY      != null ? (int) slRemovalY.getValue()      : 0;
-            ts.manualWidth  = slRemovalWidth  != null ? (int) slRemovalWidth.getValue()  : 100;
+            ts.manualX = slRemovalX != null ? (int) slRemovalX.getValue() : 0;
+            ts.manualY = slRemovalY != null ? (int) slRemovalY.getValue() : 0;
+            ts.manualWidth = slRemovalWidth != null ? (int) slRemovalWidth.getValue() : 100;
             ts.manualHeight = slRemovalHeight != null ? (int) slRemovalHeight.getValue() : 100;
         } else {
-            ts.manualX = 0; ts.manualY = 0; ts.manualWidth = 0; ts.manualHeight = 0;
+            ts.manualX = 0;
+            ts.manualY = 0;
+            ts.manualWidth = 0;
+            ts.manualHeight = 0;
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -1400,6 +1603,15 @@ public class MainActivity extends AppCompatActivity {
         wm.positionChangeIntervalSec = slWatermarkInterval != null ? (int) slWatermarkInterval.getValue() : 5;
 
         wm.syncLogo();
+
+        // ═══════════════════════════════════════════════════════════════
+// REACTION FACE
+// ═══════════════════════════════════════════════════════════════
+        ts.reactionFaceEnabled = swReactionFace != null && swReactionFace.isChecked() && selectedFaceVideoUri != null;
+        ts.reactionFaceUri = selectedFaceVideoUri != null ? selectedFaceVideoUri.toString() : null;
+        ts.reactionFacePosition = selectedFacePosition;
+        ts.reactionFaceSize = slFaceVideoSize != null ? (int) slFaceVideoSize.getValue() : 25;
+        ts.reactionFaceCornerRadius = slFaceCornerRadius != null ? (int) slFaceCornerRadius.getValue() : 100;
     }
 
     private void startProcessing() {
@@ -1500,6 +1712,22 @@ public class MainActivity extends AppCompatActivity {
         if (watermarkToggle != null) watermarkToggle.setText("▼");
         if (logoRemoverToggle != null) logoRemoverToggle.setText("▼");
 
+        // Reset Reaction Face
+        if (swReactionFace != null) swReactionFace.setChecked(false);
+        removeFaceVideo();
+        selectedFacePosition = 0;
+        if (chipFacePosTopLeft != null) chipFacePosTopLeft.setChecked(true);
+        if (chipFacePosTopRight != null) chipFacePosTopRight.setChecked(false);
+        if (chipFacePosBottomLeft != null) chipFacePosBottomLeft.setChecked(false);
+        if (chipFacePosBottomRight != null) chipFacePosBottomRight.setChecked(false);
+        if (slFaceVideoSize != null) slFaceVideoSize.setValue(100);
+        if (slFaceCornerRadius != null) slFaceCornerRadius.setValue(100);
+
+// Reset expansion state
+        reactionFaceExpanded = false;
+        if (reactionFaceContent != null) reactionFaceContent.setVisibility(View.GONE);
+        if (reactionFaceToggle != null) reactionFaceToggle.setText("▼");
+
         updateOutputSummary();
         updateWatermarkSummary();
         updateLogoRemoverSummary();
@@ -1560,5 +1788,174 @@ public class MainActivity extends AppCompatActivity {
         btnCloseX.setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+// REACTION FACE METHODS
+// ═══════════════════════════════════════════════════════════════
+
+    private void toggleReactionFaceSection() {
+        reactionFaceExpanded = !reactionFaceExpanded;
+        if (reactionFaceContent != null) {
+            reactionFaceContent.setVisibility(reactionFaceExpanded ? View.VISIBLE : View.GONE);
+            if (reactionFaceExpanded) {
+                reactionFaceContent.setAlpha(0f);
+                reactionFaceContent.animate().alpha(1f).setDuration(300).start();
+            }
+        }
+        if (reactionFaceToggle != null) {
+            reactionFaceToggle.setText(reactionFaceExpanded ? "▲" : "▼");
+        }
+
+        // Show the section when expanded
+        if (reactionFaceSection != null && reactionFaceExpanded) {
+            reactionFaceSection.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void applyReactionFaceEnabled(boolean enabled) {
+        float alpha = enabled ? 1.0f : 0.5f;
+
+        if (faceVideoPickerArea != null) faceVideoPickerArea.setAlpha(alpha);
+        if (facePositionSection != null) facePositionSection.setAlpha(alpha);
+        if (faceSizeSection != null) faceSizeSection.setAlpha(alpha);
+        if (faceCornerSection != null) faceCornerSection.setAlpha(alpha);
+
+        // Enable/disable sliders
+        if (slFaceVideoSize != null) {
+            slFaceVideoSize.setEnabled(enabled);
+        }
+        if (slFaceCornerRadius != null) {
+            slFaceCornerRadius.setEnabled(enabled);
+        }
+
+        // Show reactionFaceSection
+        if (reactionFaceSection != null) {
+            reactionFaceSection.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void openFaceVideoPicker() {
+        if (!PermissionHelper.hasPermissions(this)) {
+            Toast.makeText(this, "প্রথমে Permission দিন", Toast.LENGTH_SHORT).show();
+            checkPermissions();
+            return;
+        }
+
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+        intent.setType("video/*");
+        faceVideoPickerLauncher.launch(intent);
+    }
+
+    private void loadFaceVideoInfo() {
+        if (selectedFaceVideoUri == null) return;
+
+        try {
+            Cursor cursor = getContentResolver().query(selectedFaceVideoUri, null, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int nameIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                String fileName = nameIdx >= 0 ? cursor.getString(nameIdx) : "face_video.mp4";
+                if (faceVideoName != null) faceVideoName.setText(fileName);
+                cursor.close();
+            }
+
+            // Get thumbnail and duration
+            MediaMetadataRetriever retriever = null;
+            try {
+                retriever = new MediaMetadataRetriever();
+                retriever.setDataSource(this, selectedFaceVideoUri);
+
+                // Duration
+                String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+                String durationFormatted = "0:00";
+                if (durationStr != null) {
+                    long durationMs = Long.parseLong(durationStr);
+                    long s = TimeUnit.MILLISECONDS.toSeconds(durationMs) % 60;
+                    long m = TimeUnit.MILLISECONDS.toMinutes(durationMs);
+                    durationFormatted = String.format(Locale.US, "%d:%02d", m, s);
+                }
+
+                // Resolution
+                String w = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH);
+                String h = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT);
+                String res = (w != null && h != null) ? w + "×" + h : "";
+
+                if (faceVideoDetail != null) {
+                    faceVideoDetail.setText(durationFormatted + " · " + res);
+                }
+
+                // Thumbnail
+                if (faceVideoThumbnailBitmap != null && !faceVideoThumbnailBitmap.isRecycled()) {
+                    faceVideoThumbnailBitmap.recycle();
+                }
+                faceVideoThumbnailBitmap = retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                if (faceVideoThumbnailBitmap != null && faceVideoThumbnail != null) {
+                    faceVideoThumbnail.setImageBitmap(faceVideoThumbnailBitmap);
+                }
+
+            } catch (Exception e) {
+                Log.e(TAG, "Error getting face video metadata", e);
+                if (faceVideoDetail != null) faceVideoDetail.setText("Video loaded");
+            } finally {
+                if (retriever != null) try { retriever.release(); } catch (Exception ignored) {}
+            }
+
+            // Update UI
+            if (faceVideoDropZone != null) faceVideoDropZone.setVisibility(View.GONE);
+            if (faceVideoInfoLayout != null) {
+                faceVideoInfoLayout.setVisibility(View.VISIBLE);
+                faceVideoInfoLayout.setAlpha(0f);
+                faceVideoInfoLayout.animate().alpha(1f).setDuration(300).start();
+            }
+
+            updateReactionFaceSummary();
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading face video", e);
+            Toast.makeText(this, "Face video লোড ব্যর্থ: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void removeFaceVideo() {
+        selectedFaceVideoUri = null;
+
+        if (faceVideoThumbnailBitmap != null && !faceVideoThumbnailBitmap.isRecycled()) {
+            faceVideoThumbnailBitmap.recycle();
+            faceVideoThumbnailBitmap = null;
+        }
+
+        if (faceVideoThumbnail != null) faceVideoThumbnail.setImageBitmap(null);
+        if (faceVideoInfoLayout != null) faceVideoInfoLayout.setVisibility(View.GONE);
+        if (faceVideoDropZone != null) faceVideoDropZone.setVisibility(View.VISIBLE);
+
+        updateReactionFaceSummary();
+    }
+
+    private void updateReactionFaceSummary() {
+        if (reactionFaceSummary == null) return;
+
+        boolean enabled = swReactionFace != null && swReactionFace.isChecked();
+        boolean hasVideo = selectedFaceVideoUri != null;
+
+        if (enabled && hasVideo) {
+            String posText;
+            switch (selectedFacePosition) {
+                case 1: posText = "Top-Right"; break;
+                case 2: posText = "Bottom-Left"; break;
+                case 3: posText = "Bottom-Right"; break;
+                default: posText = "Top-Left"; break;
+            }
+            int size = slFaceVideoSize != null ? (int) slFaceVideoSize.getValue() : 100;
+            reactionFaceSummary.setText("✓ " + posText + " · " + size + "%");
+            reactionFaceSummary.setTextColor(ContextCompat.getColor(this, R.color.colorAccent2));
+        } else if (enabled) {
+            reactionFaceSummary.setText("Face video সিলেক্ট করুন");
+            reactionFaceSummary.setTextColor(ContextCompat.getColor(this, R.color.text_muted));
+        } else {
+            reactionFaceSummary.setText("ঐচ্ছিক · আপনার ফেস ভিডিও ওভারলে করুন");
+            reactionFaceSummary.setTextColor(ContextCompat.getColor(this, R.color.text_muted));
+        }
+
+        updateProcessSummary();
     }
 }

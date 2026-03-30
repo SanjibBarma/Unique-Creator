@@ -209,4 +209,43 @@ public class TransformSettings implements Serializable {
             logoRemovalMethod = removalMethod;
         }
     }
+
+
+    // ════════════════════════════════════════════════════════════════════
+// ★★★ REACTION FACE OVERLAY ★★★
+// ════════════════════════════════════════════════════════════════════
+
+    // Enable reaction face overlay
+    public boolean reactionFaceEnabled = false;
+
+    // Face video URI (stored as String for Serializable)
+    public String reactionFaceUri = null;
+
+    // Position: 0=TopLeft, 1=TopRight, 2=BottomLeft, 3=BottomRight
+    public int reactionFacePosition = 0;
+
+    // Size as percentage of video width (10-50%)
+    public int reactionFaceSize = 100;
+
+    // Corner radius percentage (0=square, 50=circle)
+    public int reactionFaceCornerRadius = 100;
+
+// ════════════════════════════════════════════════════════════════════
+// HELPER METHODS FOR REACTION FACE
+// ════════════════════════════════════════════════════════════════════
+
+    /**
+     * Check if reaction face is enabled and has valid URI
+     */
+    public boolean hasReactionFace() {
+        return reactionFaceEnabled && reactionFaceUri != null && !reactionFaceUri.isEmpty();
+    }
+
+    /**
+     * Get position as enum-like values for easier processing
+     */
+    public static final int FACE_POS_TOP_LEFT = 0;
+    public static final int FACE_POS_TOP_RIGHT = 1;
+    public static final int FACE_POS_BOTTOM_LEFT = 2;
+    public static final int FACE_POS_BOTTOM_RIGHT = 3;
 }

@@ -1624,6 +1624,95 @@
                 </androidx.cardview.widget.CardView>
 
                 <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- STEP 6: REACTION FACE (NEW) -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="@color/card_dark"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Collapsible Header -->
+                        <LinearLayout
+                            android:id="@+id/reactionFaceHeader"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="20dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:gravity="center"
+                                android:text="6"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/white"
+                                android:background="@drawable/bg_step_number"/>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="😊 Reaction Face"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"/>
+
+                                <TextView
+                                    android:id="@+id/reactionFaceSummary"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="ঐচ্ছিক · আপনার ফেস ভিডিও ওভারলে করুন"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/reactionFaceToggle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▼"
+                                android:textSize="14sp"
+                                android:textColor="@color/text_muted"/>
+                        </LinearLayout>
+
+                        <!-- Reaction Face Content (Collapsible) -->
+                        <LinearLayout
+                            android:id="@+id/reactionFaceContent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="20dp"
+                            android:paddingBottom="20dp"
+                            android:visibility="gone">
+
+                            <!-- Include the section layout -->
+                            <include layout="@layout/section_reaction_face"/>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
                 <!-- START BUTTON -->
                 <!-- ═══════════════════════════════════════════════════════════════ -->
                 <androidx.cardview.widget.CardView
