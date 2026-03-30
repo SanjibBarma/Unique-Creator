@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_transform_item"
+        android:padding="12dp"
+        android:layout_marginBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="⚡"
+                android:textSize="18sp"
+                android:paddingTop="4dp"
+                android:textAlignment="center"
+                android:background="@drawable/bg_transform_icon"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Temporal Jitter"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ফ্রেম স্কিপ/ডুপ্লিকেট"
+                    android:textColor="@color/text_muted"
+                    android:textSize="11sp"/>
+            </LinearLayout>
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/swTemporalJitter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"/>
+        </LinearLayout>
+
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slTemporalJitter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:valueFrom="0.01"
+            android:valueTo="0.1"
+            android:value="0.02"
+            android:stepSize="0.01"
+            app:trackColorActive="@color/colorPrimary"
+            app:trackColorInactive="@color/text_muted"
+            app:thumbColor="@color/colorPrimary"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1%"
+                android:textColor="@color/text_muted"
+                android:textSize="10sp"/>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <TextView
+                android:id="@+id/temporalJitterValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2%"
+                android:textColor="@color/colorAccent2"
+                android:textSize="12sp"
+                android:textStyle="bold"/>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="10%"
+                android:textColor="@color/text_muted"
+                android:textSize="10sp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

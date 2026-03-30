@@ -1,0 +1,619 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="16dp"
+    app:cardBackgroundColor="@color/card_dark"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header (Fixed - won't scroll) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="20dp"
+            android:background="@drawable/bg_dialog_header">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ℹ️"
+                android:textSize="28sp"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="অ্যাপ সম্পর্কে"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ফিচার ও সতর্কতা"
+                    android:textColor="@color/text_muted"
+                    android:textSize="12sp"/>
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnCloseDialogX"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_close_button"
+                android:src="@drawable/ic_close"
+                app:tint="@color/text_muted"
+                android:contentDescription="Close"/>
+        </LinearLayout>
+
+        <!-- Scrollable Content -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true"
+            android:scrollbars="vertical"
+            android:fadeScrollbars="false">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- NEW: DEVICE SPECIFICATION SECTION -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📱 ডিভাইসের প্রয়োজনীয় স্পেসিফিকেশন"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_warning_box"
+                    android:padding="14dp"
+                    android:layout_marginBottom="20dp">
+
+                    <!-- Minimum Spec -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅ Minimum (চলবে কিন্তু ধীরে)"
+                        android:textColor="#4CAF50"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="6dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="• Android 8.0+\n• 4 GB RAM\n• Snapdragon 660 / Helio G85\n• 64 GB স্টোরেজ (৪ GB ফ্রি)"
+                        android:textColor="#FFCC80"
+                        android:textSize="12.5sp"
+                        android:lineSpacingExtra="4dp"/>
+
+                    <!-- Recommended Spec -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/text_muted"
+                        android:alpha="0.25"
+                        android:layout_marginVertical="10dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🚀 Recommended (সবচেয়ে ভালো পারফরম্যান্স)"
+                        android:textColor="#4CAF50"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="6dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="• Android 11+\n• 6–8 GB RAM\n• Snapdragon 778G / Dimensity 1200 / Exynos 1380\n• 128 GB+ স্টোরেজ\n• Adreno 660+ বা Mali-G68+ GPU"
+                        android:textColor="#FFCC80"
+                        android:textSize="12.5sp"
+                        android:lineSpacingExtra="4dp"/>
+
+<!--                    &lt;!&ndash; Note &ndash;&gt;-->
+<!--                    <TextView-->
+<!--                        android:layout_width="match_parent"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:text="⚠️ 4K ভিডিও প্রসেস করতে চাইলে অবশ্যই Recommended বা তার উপরের ডিভাইস ব্যবহার করুন।"-->
+<!--                        android:textColor="#FF9800"-->
+<!--                        android:textSize="11.5sp"-->
+<!--                        android:layout_marginTop="10dp"-->
+<!--                        android:lineSpacingExtra="2dp"/>-->
+                </LinearLayout>
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- FEATURES SECTION -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🚀 এই অ্যাপ দিয়ে যা করতে পারবেন"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Feature 1 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="26+ ট্রান্সফর্মেশন দিয়ে ভিডিও মডিফাই করুন"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <!-- Feature 2 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="YouTube, Facebook, Instagram কপিরাইট ডিটেকশন বাইপাস"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <!-- Feature 3 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="100% অফলাইন - কোনো ডাটা সার্ভারে যায় না"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <!-- Feature 4 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="কাস্টম লোগো ও ওয়াটারমার্ক যোগ করুন"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <!-- Feature 5 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="রেজুলেশন ও অ্যাসপেক্ট রেশিও পরিবর্তন"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <!-- Feature 6 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="অডিও পিচ, স্পিড ও ভলিউম কন্ট্রোল"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <!-- Feature 7 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="ভিডিও কালার, ব্রাইটনেস, স্যাচুরেশন এডজাস্ট"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <!-- Feature 8 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="প্রসেস করা ভিডিও তুলনা করুন অরিজিনালের সাথে"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/text_muted"
+                    android:alpha="0.2"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- WARNING SECTION -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⚠️ সতর্কতা ও দায়বদ্ধতা"
+                    android:textColor="#FFC107"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Warning Box -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_warning_box"
+                    android:padding="14dp"
+                    android:layout_marginBottom="12dp">
+
+                    <!-- Warning 1 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="top"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⛔"
+                            android:textSize="12sp"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="এই অ্যাপ শুধুমাত্র শিক্ষামূলক ও ব্যক্তিগত ব্যবহারের জন্য।"
+                            android:textColor="#FFCC80"
+                            android:textSize="12sp"/>
+                    </LinearLayout>
+
+                    <!-- Warning 2 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="top"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⛔"
+                            android:textSize="12sp"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="অন্যের কপিরাইটেড কন্টেন্ট চুরি করা বেআইনি।"
+                            android:textColor="#FFCC80"
+                            android:textSize="12sp"/>
+                    </LinearLayout>
+
+                    <!-- Warning 3 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="top"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⛔"
+                            android:textSize="12sp"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="শুধুমাত্র নিজের তৈরি বা লাইসেন্সপ্রাপ্ত কন্টেন্ট ব্যবহার করুন।"
+                            android:textColor="#FFCC80"
+                            android:textSize="12sp"/>
+                    </LinearLayout>
+
+                    <!-- Warning 4 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="top">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⛔"
+                            android:textSize="12sp"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="অপব্যবহারের জন্য ডেভেলপার দায়ী নয়।"
+                            android:textColor="#FFCC80"
+                            android:textSize="12sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/text_muted"
+                    android:alpha="0.2"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- TIPS SECTION -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="💡 সেরা ফলাফলের জন্য টিপস"
+                    android:textColor="@color/colorAccent2"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Tip 1 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="•"
+                        android:textSize="14sp"
+                        android:textColor="@color/colorAccent2"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="একাধিক ট্রান্সফর্ম একসাথে ব্যবহার করুন"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+
+                <!-- Tip 2 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="•"
+                        android:textSize="14sp"
+                        android:textColor="@color/colorAccent2"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="অডিও ট্রান্সফর্ম (Pitch, Volume) অবশ্যই ON রাখুন"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+
+                <!-- Tip 3 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="•"
+                        android:textSize="14sp"
+                        android:textColor="@color/colorAccent2"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Subtle প্রিসেট ব্যবহার করলে ভিডিও কোয়ালিটি ভালো থাকে"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+
+                <!-- Tip 4 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="top">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="•"
+                        android:textSize="14sp"
+                        android:textColor="@color/colorAccent2"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="প্রসেসিংয়ের আগে ফোনে পর্যাপ্ত স্টোরেজ রাখুন"
+                        android:textColor="@color/text_muted"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Close Button (Fixed - won't scroll) -->
+        <Button
+            android:id="@+id/btnCloseDialog"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_margin="16dp"
+            android:background="@drawable/bg_button_gradient"
+            android:text="বুঝেছি ✓"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textAllCaps="false"/>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark"
+    android:fitsSystemWindows="true">
+
+    <!-- Animated Background Gradient -->
+    <View
+        android:id="@+id/bgGradient1"
+        android:layout_width="400dp"
+        android:layout_height="400dp"
+        android:background="@drawable/bg_splash_circle1"
+        android:alpha="0.3"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:translationX="-100dp"
+        android:translationY="-100dp"/>
+
+    <View
+        android:id="@+id/bgGradient2"
+        android:layout_width="350dp"
+        android:layout_height="350dp"
+        android:background="@drawable/bg_splash_circle2"
+        android:alpha="0.25"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:translationX="80dp"
+        android:translationY="80dp"/>
+
+    <View
+        android:id="@+id/bgGradient3"
+        android:layout_width="250dp"
+        android:layout_height="250dp"
+        android:background="@drawable/bg_splash_circle3"
+        android:alpha="0.2"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:translationX="50dp"
+        android:translationY="150dp"/>
+
+    <!-- Main Content -->
+    <LinearLayout
+        android:id="@+id/mainContent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Logo Container with Multiple Rings -->
+        <FrameLayout
+            android:id="@+id/logoContainer"
+            android:layout_width="180dp"
+            android:layout_height="180dp"
+            android:layout_marginBottom="32dp">
+
+            <!-- Outer Ring 3 -->
+            <View
+                android:id="@+id/ring3"
+                android:layout_width="180dp"
+                android:layout_height="180dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_splash_ring3"/>
+
+            <!-- Outer Ring 2 -->
+            <View
+                android:id="@+id/ring2"
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_splash_ring2"/>
+
+            <!-- Outer Ring 1 -->
+            <View
+                android:id="@+id/ring1"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_splash_ring1"/>
+
+            <!-- Pulse Effect -->
+            <View
+                android:id="@+id/logoPulse"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_splash_pulse"/>
+
+            <!-- Logo Background -->
+            <View
+                android:id="@+id/logoBg"
+                android:layout_width="90dp"
+                android:layout_height="90dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_splash_logo"/>
+
+            <!-- Logo Icon -->
+            <TextView
+                android:id="@+id/logoIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="©"
+                android:textSize="60sp"
+                android:textColor="@color/colorPrimary"/>
+            <!--android:text="⬡©"-->
+
+            <!-- Particles (Small dots around logo) -->
+            <View
+                android:id="@+id/particle1"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_gravity="top|center_horizontal"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_particle"/>
+
+            <View
+                android:id="@+id/particle2"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="15dp"
+                android:background="@drawable/bg_particle"/>
+
+            <View
+                android:id="@+id/particle3"
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_particle_cyan"/>
+
+            <View
+                android:id="@+id/particle4"
+                android:layout_width="5dp"
+                android:layout_height="5dp"
+                android:layout_gravity="start|center_vertical"
+                android:layout_marginStart="18dp"
+                android:background="@drawable/bg_particle_cyan"/>
+
+        </FrameLayout>
+
+        <!-- App Name -->
+        <TextView
+            android:id="@+id/appName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:letterSpacing="0.05"/>
+
+        <!-- Tagline -->
+        <TextView
+            android:id="@+id/tagline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="কপিরাইট মুক্ত ভিডিও তৈরি করুন"
+            android:textSize="14sp"
+            android:textColor="@color/text_muted"/>
+
+        <!-- Feature Pills -->
+        <LinearLayout
+            android:id="@+id/featurePills"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/pill1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_splash_pill"
+                android:text="🔒 100% অফলাইন"
+                android:textColor="@color/colorAccent2"
+                android:textSize="11sp"/>
+
+            <TextView
+                android:id="@+id/pill2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_splash_pill"
+                android:text="⚡ 26+ ট্রান্সফর্ম"
+                android:textColor="@color/colorPrimary"
+                android:textSize="11sp"/>
+
+            <TextView
+                android:id="@+id/pill3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/bg_splash_pill"
+                android:text="✓ 98% বাইপাস"
+                android:textColor="#4CAF50"
+                android:textSize="11sp"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Bottom Section -->
+    <LinearLayout
+        android:id="@+id/bottomSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingBottom="48dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- Loading Indicator -->
+        <FrameLayout
+            android:id="@+id/loadingContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <!-- Progress Bar Background -->
+            <View
+                android:layout_width="200dp"
+                android:layout_height="4dp"
+                android:background="@drawable/bg_progress_track"/>
+
+            <!-- Animated Progress -->
+            <View
+                android:id="@+id/progressBar"
+                android:layout_width="0dp"
+                android:layout_height="4dp"
+                android:background="@drawable/bg_progress_indicator"/>
+
+        </FrameLayout>
+
+        <!-- Loading Text -->
+        <TextView
+            android:id="@+id/loadingText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="অ্যাপ লোড হচ্ছে..."
+            android:textSize="12sp"
+            android:textColor="@color/text_muted"/>
+
+        <!-- Version -->
+        <TextView
+            android:id="@+id/versionText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text=""
+            android:textSize="11sp"
+            android:textColor="@color/text_muted"
+            android:alpha="0.5"/>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

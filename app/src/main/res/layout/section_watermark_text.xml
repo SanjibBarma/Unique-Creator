@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/textSection"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:visibility="gone">
+
+    <EditText
+        android:id="@+id/etWmText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/bg_card"
+        android:hint="আপনার নাম / চ্যানেল নাম"
+        android:inputType="text"
+        android:maxLines="1"
+        android:padding="12dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_muted"
+        android:textSize="14sp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:text="অবস্থান"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp"
+        android:textStyle="bold"/>
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/textPosGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        app:singleSelection="true">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTextPosTopLeft"
+            style="@style/CustomChipChoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="↖"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTextPosTopRight"
+            style="@style/CustomChipChoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="↗"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTextPosBottomLeft"
+            style="@style/CustomChipChoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="↙"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTextPosBottomRight"
+            style="@style/CustomChipChoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="↘"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTextPosCenter"
+            style="@style/CustomChipChoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⊙"/>
+    </com.google.android.material.chip.ChipGroup>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="2dp"
+        android:text="ফন্ট সাইজ"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp"/>
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/slWmFont"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:stepSize="2"
+        android:value="22"
+        android:valueFrom="12"
+        android:valueTo="48"
+        app:thumbColor="@color/colorPrimary"
+        app:trackColorActive="@color/colorPrimary"
+        app:labelBehavior="gone"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="2dp"
+        android:text="অপাসিটি %"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp"/>
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/slWmOpacity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:stepSize="5"
+        android:value="70"
+        android:valueFrom="10"
+        android:valueTo="100"
+        app:thumbColor="@color/colorPrimary"
+        app:trackColorActive="@color/colorPrimary"
+        app:labelBehavior="gone"/>
+
+    <!-- Color + Style row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="রং"
+            android:textColor="@color/text_muted"
+            android:textSize="11sp"/>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="8dp"
+            android:layout_marginEnd="8dp">
+            <View
+                android:id="@+id/wmColorSwatch"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="#FFFFFFFF"
+                android:clickable="true"
+                android:focusable="true"/>
+        </androidx.cardview.widget.CardView>
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/wmStyleGroup"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipStyleNormal"
+                style="@style/CustomChipChoice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="সাধারণ"/>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipStyleBold"
+                style="@style/CustomChipChoice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bold"/>
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipStyleOutline"
+                style="@style/CustomChipChoice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Outline"/>
+        </com.google.android.material.chip.ChipGroup>
+    </LinearLayout>
+</LinearLayout>

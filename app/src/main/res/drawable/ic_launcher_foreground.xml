@@ -1,0 +1,47 @@
+<!-- res/drawable/ic_launcher_foreground.xml -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Shield with Crossed Copyright Symbol -->
+    <group
+        android:translateX="30"
+        android:translateY="25">
+
+        <!-- Shield Shape (Outer) -->
+        <path
+            android:pathData="M24,3L3,12L3,29C3,41 12,52 24,56C36,52 45,41 45,29L45,12L24,3Z"
+            android:fillColor="#6C63FF"/>
+
+        <!-- Shield Inner (Dark) -->
+        <path
+            android:pathData="M24,8L8,15L8,29C8,38 15,47 24,50C33,47 40,38 40,29L40,15L24,8Z"
+            android:fillColor="#1a1a2e"/>
+
+        <!-- Copyright © Symbol -->
+        <!-- Outer Circle -->
+        <path
+            android:pathData="M24,28m-10,0a10,10 0,1 1,20 0a10,10 0,1 1,-20 0"
+            android:strokeWidth="2"
+            android:strokeColor="#FFFFFF"
+            android:fillColor="@android:color/transparent"/>
+
+        <!-- C Letter inside -->
+        <path
+            android:pathData="M28,23C27,21.5 25.5,21 24,21C20.7,21 18,24 18,28C18,32 20.7,35 24,35C25.5,35 27,34.5 28,33"
+            android:strokeWidth="2.5"
+            android:strokeColor="#FFFFFF"
+            android:strokeLineCap="round"
+            android:fillColor="@android:color/transparent"/>
+
+        <!-- Cross/Slash Line -->
+        <path
+            android:pathData="M16,20L32,36"
+            android:strokeWidth="2.5"
+            android:strokeColor="#FF5555"
+            android:strokeLineCap="round"/>
+
+    </group>
+</vector>

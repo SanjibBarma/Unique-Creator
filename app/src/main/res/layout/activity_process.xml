@@ -1,0 +1,848 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="@color/bg_dark">
+
+    <!-- Animated Background Gradient -->
+    <View
+        android:id="@+id/animatedBg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_animated_gradient"
+        android:alpha="0.3"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- PROCESSING LAYOUT -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/processingLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <!-- Header with animated icon -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:id="@+id/processingIcon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🎬"
+                        android:textSize="32sp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ভিডিও প্রসেসিং"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:layout_marginStart="12dp"/>
+                </LinearLayout>
+
+                <!-- Main Progress Card -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_dark"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="12dp"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp"
+                        android:gravity="center">
+
+                        <!-- Circular Progress with Animation -->
+                        <FrameLayout
+                            android:layout_width="160dp"
+                            android:layout_height="160dp"
+                            android:layout_marginBottom="12dp">
+
+                            <!-- Outer rotating ring -->
+                            <ProgressBar
+                                android:id="@+id/outerRing"
+                                style="?android:attr/progressBarStyle"
+                                android:layout_width="160dp"
+                                android:layout_height="160dp"
+                                android:indeterminate="true"
+                                android:indeterminateTint="@color/colorPrimary"
+                                android:alpha="0.3"/>
+
+                            <!-- Main circular progress -->
+                            <ProgressBar
+                                android:id="@+id/progressBar"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="140dp"
+                                android:layout_height="140dp"
+                                android:layout_gravity="center"
+                                android:indeterminate="false"
+                                android:max="100"
+                                android:progress="0"
+                                android:progressDrawable="@drawable/circular_progress_gradient"/>
+
+                            <!-- Progress Text Container -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:orientation="vertical"
+                                android:gravity="center">
+
+                                <TextView
+                                    android:id="@+id/progressText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0"
+                                    android:textSize="36sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/colorAccent2"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="%"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/text_muted"
+                                    android:layout_marginTop="-8dp"/>
+                            </LinearLayout>
+                        </FrameLayout>
+
+                        <!-- Current Stage -->
+                        <TextView
+                            android:id="@+id/currentStage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="বিশ্লেষণ করা হচ্ছে..."
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/colorPrimary"
+                            android:layout_marginBottom="8dp"/>
+
+                        <!-- Stage Progress Dots -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center"
+                            android:layout_marginBottom="16dp">
+
+                            <TextView
+                                android:id="@+id/stage1"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:background="@drawable/stage_dot_active"/>
+
+                            <View
+                                android:id="@+id/stageLine1"
+                                android:layout_width="32dp"
+                                android:layout_height="2dp"
+                                android:background="@color/text_muted"
+                                android:layout_marginHorizontal="4dp"/>
+
+                            <TextView
+                                android:id="@+id/stage2"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:background="@drawable/stage_dot_inactive"/>
+
+                            <View
+                                android:id="@+id/stageLine2"
+                                android:layout_width="32dp"
+                                android:layout_height="2dp"
+                                android:background="@color/text_muted"
+                                android:layout_marginHorizontal="4dp"/>
+
+                            <TextView
+                                android:id="@+id/stage3"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:background="@drawable/stage_dot_inactive"/>
+
+                            <View
+                                android:id="@+id/stageLine3"
+                                android:layout_width="32dp"
+                                android:layout_height="2dp"
+                                android:background="@color/text_muted"
+                                android:layout_marginHorizontal="4dp"/>
+
+                            <TextView
+                                android:id="@+id/stage4"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"
+                                android:background="@drawable/stage_dot_inactive"/>
+                        </LinearLayout>
+
+                        <!-- Stage Labels -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="বিশ্লেষণ"
+                                android:textSize="10sp"
+                                android:textColor="@color/text_muted"
+                                android:gravity="center"/>
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="প্রসেসিং"
+                                android:textSize="10sp"
+                                android:textColor="@color/text_muted"
+                                android:gravity="center"/>
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="এনকোডিং"
+                                android:textSize="10sp"
+                                android:textColor="@color/text_muted"
+                                android:gravity="center"/>
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="সম্পন্ন"
+                                android:textSize="10sp"
+                                android:textColor="@color/text_muted"
+                                android:gravity="center"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- File Info Card -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_dark"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="8dp"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="16dp">
+
+                        <!-- Input Info -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📁"
+                                android:textSize="20sp"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ইনপুট"
+                                android:textSize="10sp"
+                                android:textColor="@color/text_muted"
+                                android:layout_marginTop="4dp"/>
+
+                            <TextView
+                                android:id="@+id/inputFileSize"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="--"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_primary"/>
+                        </LinearLayout>
+
+                        <!-- Output Info -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📤"
+                                android:textSize="20sp"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="আউটপুট"
+                                android:textSize="10sp"
+                                android:textColor="@color/text_muted"
+                                android:layout_marginTop="4dp"/>
+
+                            <TextView
+                                android:id="@+id/outputResolution"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="--"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/colorAccent2"/>
+                        </LinearLayout>
+
+                        <!-- Video Frames -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🎞️"
+                                android:textSize="20sp"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ভিডিও ফ্রেম"
+                                android:textSize="10sp"
+                                android:textColor="@color/text_muted"
+                                android:layout_marginTop="4dp"/>
+
+                            <TextView
+                                android:id="@+id/frameCount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_primary"/>
+                        </LinearLayout>
+
+                        <!-- Audio Frames -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🔊"
+                                android:textSize="20sp"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="অডিও ফ্রেম"
+                                android:textSize="10sp"
+                                android:textColor="@color/text_muted"
+                                android:layout_marginTop="4dp"/>
+
+                            <TextView
+                                android:id="@+id/audioFrameCount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_primary"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Fun Tips Card -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="#1A4CAF50"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="4dp"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tipIcon"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="💡"
+                            android:textSize="24sp"/>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="জানেন কি?"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/colorAccent2"/>
+
+                            <TextView
+                                android:id="@+id/tipText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="AI ব্যবহার করে ভিডিও ইউনিক করা হচ্ছে..."
+                                android:textSize="13sp"
+                                android:textColor="@color/text_primary"
+                                android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Log Card (Collapsible) -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_dark"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Log Header -->
+                        <LinearLayout
+                            android:id="@+id/logHeader"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:padding="12dp"
+                            android:gravity="center_vertical"
+                            android:background="?attr/selectableItemBackground">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📋"
+                                android:textSize="16sp"/>
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="প্রসেস লগ"
+                                android:textSize="14sp"
+                                android:textColor="@color/text_muted"
+                                android:layout_marginStart="8dp"/>
+
+                            <TextView
+                                android:id="@+id/logToggle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▼"
+                                android:textSize="12sp"
+                                android:textColor="@color/text_muted"/>
+                        </LinearLayout>
+
+                        <!-- Log Content -->
+                        <ScrollView
+                            android:id="@+id/logScrollView"
+                            android:layout_width="match_parent"
+                            android:layout_height="120dp"
+                            android:visibility="gone"
+                            android:background="#0AFFFFFF"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:id="@+id/logText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text=""
+                                android:textSize="10sp"
+                                android:textColor="@color/colorAccent2"
+                                android:fontFamily="monospace"
+                                android:lineSpacingExtra="2dp"/>
+                        </ScrollView>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- DONE LAYOUT -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/doneLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone">
+
+                <!-- Success Animation Container -->
+                <FrameLayout
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/bg_success_pulse"
+                    android:backgroundTint="@color/bg_dark">
+
+                    <!-- Pulse Animation Background -->
+                    <View
+                        android:id="@+id/pulseView"
+                        android:layout_width="120dp"
+                        android:layout_height="120dp"
+                        android:background="@drawable/bg_success_pulse"
+                        android:alpha="0.5"/>
+
+                    <!-- Success Icon -->
+                    <TextView
+                        android:id="@+id/successIcon"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:layout_gravity="center"
+                        android:text="✓"
+                        android:gravity="center"
+                        android:textSize="40sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:background="@drawable/bg_success_circle"/>
+                </FrameLayout>
+
+                <!-- Success Text -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="সফলভাবে সম্পন্ন! 🎉"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/colorAccent2"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="আপনার ভিডিও এখন 100% কপিরাইট ফ্রি!"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_muted"
+                    android:layout_marginBottom="24dp"/>
+
+                <!-- Video Preview Card -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_dark"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="12dp"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Thumbnail Container -->
+                        <FrameLayout
+                            android:id="@+id/thumbnailContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="200dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground">
+
+                            <ImageView
+                                android:id="@+id/videoThumbnail"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:background="@color/black"/>
+
+                            <!-- Gradient Overlay -->
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="80dp"
+                                android:layout_gravity="bottom"
+                                android:background="@drawable/bg_thumbnail_gradient"/>
+
+                            <!-- Play Button -->
+                            <FrameLayout
+                                android:layout_width="72dp"
+                                android:layout_height="72dp"
+                                android:layout_gravity="center"
+                                android:background="@drawable/bg_play_button_large">
+
+                                <ImageView
+                                    android:layout_width="36dp"
+                                    android:layout_height="36dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_play"
+                                    app:tint="@color/white"/>
+                            </FrameLayout>
+
+                            <!-- Duration Badge -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="bottom|end"
+                                android:layout_margin="12dp"
+                                android:background="@drawable/bg_duration_badge"
+                                android:paddingHorizontal="10dp"
+                                android:paddingVertical="6dp"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="⏱"
+                                    android:textSize="12sp"/>
+
+                                <TextView
+                                    android:id="@+id/videoDuration"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="00:00"
+                                    android:textColor="@color/white"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold"
+                                    android:layout_marginStart="4dp"/>
+                            </LinearLayout>
+
+                            <!-- Tap Hint -->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="bottom|center_horizontal"
+                                android:layout_marginBottom="12dp"
+                                android:text="👆 ট্যাপ করে প্লে করুন"
+                                android:textColor="@color/white"
+                                android:textSize="12sp"
+                                android:alpha="0.9"/>
+                        </FrameLayout>
+
+                        <!-- Video Stats -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:padding="16dp"
+                            android:baselineAligned="false">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="📁"
+                                    android:textSize="20sp"/>
+
+                                <TextView
+                                    android:id="@+id/outputFileSize"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="--"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_primary"
+                                    android:layout_marginTop="4dp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="সাইজ"
+                                    android:textSize="11sp"
+                                    android:textColor="@color/text_muted"/>
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🖼️"
+                                    android:textSize="20sp"/>
+
+                                <TextView
+                                    android:id="@+id/outputResolutionDone"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="--"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_primary"
+                                    android:layout_marginTop="4dp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="রেজুলেশন"
+                                    android:textSize="11sp"
+                                    android:textColor="@color/text_muted"/>
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🎞️"
+                                    android:textSize="20sp"/>
+
+                                <TextView
+                                    android:id="@+id/totalFrames"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="--"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_primary"
+                                    android:layout_marginTop="4dp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="ভিডিও"
+                                    android:textSize="11sp"
+                                    android:textColor="@color/text_muted"/>
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🔊"
+                                    android:textSize="20sp"/>
+
+                                <TextView
+                                    android:id="@+id/totalAudioFrames"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="--"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_primary"
+                                    android:layout_marginTop="4dp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="অডিও"
+                                    android:textSize="11sp"
+                                    android:textColor="@color/text_muted"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Action Buttons -->
+                <Button
+                    android:id="@+id/downloadBtn"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:text="📥  গ্যালারিতে সেভ করুন"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:background="@drawable/bg_button_gradient"
+                    android:layout_marginBottom="12dp"
+                    android:textAllCaps="false"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <Button
+                        android:id="@+id/shareBtn"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="📤 শেয়ার"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_primary"
+                        android:background="@drawable/bg_button_outline"
+                        android:layout_marginEnd="8dp"
+                        android:textAllCaps="false"
+                        style="?attr/borderlessButtonStyle"/>
+
+                    <Button
+                        android:id="@+id/newVideoBtn"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="🎬 নতুন ভিডিও"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_primary"
+                        android:background="@drawable/bg_button_outline"
+                        android:layout_marginStart="8dp"
+                        android:textAllCaps="false"
+                        style="?attr/borderlessButtonStyle"/>
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+</FrameLayout>

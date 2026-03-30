@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Unique Creator</string>
+
+    <!-- Main Screen -->
+    <string name="drop_title">ভিডিও সিলেক্ট করুন</string>
+    <string name="drop_subtitle">MP4, WebM, MOV, AVI সব ফরম্যাট সাপোর্টেড</string>
+    <string name="select_video">ভিডিও বেছে নিন</string>
+    <string name="change_video">পরিবর্তন করুন</string>
+
+    <!-- Settings -->
+    <string name="resolution_title">রেজোলিউশন</string>
+    <string name="ratio_title">স্ক্রিন রেশিও</string>
+    <string name="transforms_title">কপিরাইট বাইপাস ট্রান্সফর্ম</string>
+    <string name="watermark_title">লোগো ও ওয়াটারমার্ক</string>
+
+    <!-- Effects -->
+    <string name="effect_flip">হরিজন্টাল ফ্লিপ</string>
+    <string name="effect_speed">স্পিড পরিবর্তন</string>
+    <string name="effect_hue">হিউ/কালার শিফট</string>
+    <string name="effect_brightness">ব্রাইটনেস</string>
+    <string name="effect_saturation">স্যাচুরেশন</string>
+    <string name="effect_zoom">জুম ইন</string>
+    <string name="effect_rotate">রোটেশন</string>
+    <string name="effect_gamma">গামা কারেকশন</string>
+    <string name="effect_noise">ফিল্ম গ্রেইন</string>
+    <string name="effect_vignette">ভিগনেট</string>
+    <string name="effect_border">বর্ডার</string>
+    <string name="effect_tint">কালার টিন্ট</string>
+    <string name="effect_blur">সূক্ষ্ম ব্লার</string>
+    <string name="effect_sepia">সেপিয়া টোন</string>
+
+    <!-- Processing -->
+    <string name="processing_title">প্রসেসিং চলছে</string>
+    <string name="start_process">প্রসেস শুরু করুন</string>
+    <string name="download">ডাউনলোড করুন</string>
+    <string name="new_video">নতুন ভিডিও</string>
+
+    <!-- Messages -->
+    <string name="success_title">100%% কপিরাইট ফ্রি!</string>
+    <string name="success_message">সব ট্রান্সফর্মেশন সফলভাবে প্রয়োগ হয়েছে।</string>
+    <string name="permission_required">স্টোরেজ পারমিশন প্রয়োজন</string>
+    <string name="error_occurred">সমস্যা হয়েছে</string>
+</resources>

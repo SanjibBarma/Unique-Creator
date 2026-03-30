@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_transform_item"
+    android:padding="12dp"
+    android:layout_marginBottom="8dp">
+
+    <!-- Header Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:text="📊"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:background="@drawable/bg_transform_icon"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Border Progress"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Duration ভিত্তিক progress bar"
+                android:textColor="@color/text_muted"
+                android:textSize="11sp"/>
+        </LinearLayout>
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swBorderProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"/>
+    </LinearLayout>
+
+    <!-- Size Slider Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Size:"
+            android:textColor="@color/text_muted"
+            android:textSize="11sp"/>
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slBorderProgress"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="8dp"
+            android:valueFrom="2"
+            android:valueTo="20"
+            android:value="4"
+            android:stepSize="1"
+            app:trackColorActive="@color/colorPrimary"
+            app:trackColorInactive="@color/text_muted"
+            app:thumbColor="@color/colorPrimary"/>
+
+        <TextView
+            android:id="@+id/borderProgressValue"
+            android:layout_width="50dp"
+            android:layout_height="wrap_content"
+            android:text="4px"
+            android:textColor="@color/colorAccent2"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="end"/>
+    </LinearLayout>
+
+    <!-- ★ NEW: Color Picker Row (Simple Version) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Color:"
+            android:textColor="@color/text_muted"
+            android:textSize="11sp"/>
+
+        <View
+            android:id="@+id/borderProgressColorSwatch"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="10dp"
+            android:background="#00FF80"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="← ট্যাপ করে রং বদলান"
+            android:textColor="@color/text_muted"
+            android:textSize="10sp"
+            android:layout_marginStart="10dp"/>
+    </LinearLayout>
+
+</LinearLayout>

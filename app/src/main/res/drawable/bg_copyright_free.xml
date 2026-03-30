@@ -1,0 +1,30 @@
+<!-- res/drawable/ic_copyright_free.xml -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Copyright © Circle -->
+    <path
+        android:pathData="M24,24m-18,0a18,18 0,1 1,36 0a18,18 0,1 1,-36 0"
+        android:strokeWidth="3"
+        android:strokeColor="#FFFFFF"
+        android:fillColor="@android:color/transparent"/>
+
+    <!-- C Letter -->
+    <path
+        android:pathData="M30,16C28,13 26,12 24,12C17,12 12,17.5 12,24C12,30.5 17,36 24,36C26,36 28,35 30,32"
+        android:strokeWidth="3.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"/>
+
+    <!-- Slash Line -->
+    <path
+        android:pathData="M8,8L40,40"
+        android:strokeWidth="4"
+        android:strokeColor="#FF5555"
+        android:strokeLineCap="round"/>
+
+</vector>

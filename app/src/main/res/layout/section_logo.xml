@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/logoSection"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/logoPreview"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"/>
+
+        <TextView
+            android:id="@+id/logoDropText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📷 লোগো বেছে নিন"
+            android:textColor="@color/text_muted"
+            android:textSize="12sp"/>
+
+        <Button
+            android:id="@+id/logoPickBtn"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="বেছে নিন"
+            android:textSize="12sp"
+            app:cornerRadius="8dp"
+            app:strokeColor="@color/colorPrimary"/>
+
+        <Button
+            android:id="@+id/logoRemoveBtn"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✕"
+            android:textColor="#fc875c"
+            android:visibility="gone"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:text="অবস্থান"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp"
+        android:textStyle="bold"/>
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/logoPosGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        app:singleSelection="true">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipLogoPosTopLeft"
+            style="@style/CustomChipChoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="↖"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipLogoPosTopRight"
+            style="@style/CustomChipChoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="↗"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipLogoPosBottomLeft"
+            style="@style/CustomChipChoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="↙"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipLogoPosBottomRight"
+            style="@style/CustomChipChoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="↘"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipLogoPosCenter"
+            style="@style/CustomChipChoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⊙"/>
+    </com.google.android.material.chip.ChipGroup>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="2dp"
+        android:text="আকার (ভিডিও প্রস্থের %)"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp"/>
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/slLogoSize"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:stepSize="1"
+        android:value="10"
+        android:valueFrom="3"
+        android:valueTo="20"
+        app:thumbColor="@color/colorPrimary"
+        app:trackColorActive="@color/colorPrimary"
+        app:labelBehavior="gone"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="2dp"
+        android:text="অপাসিটি %"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp"/>
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/slLogoOpacity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:stepSize="5"
+        android:value="80"
+        android:valueFrom="10"
+        android:valueTo="100"
+        app:thumbColor="@color/colorPrimary"
+        app:trackColorActive="@color/colorPrimary"
+        app:labelBehavior="gone"/>
+</LinearLayout>

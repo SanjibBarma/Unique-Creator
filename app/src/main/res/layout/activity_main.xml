@@ -1,0 +1,1747 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark"
+    android:fitsSystemWindows="true">
+
+    <!-- Animated Background -->
+    <View
+        android:id="@+id/animatedBgMain"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:background="@drawable/bg_header_gradient"
+        android:alpha="0.4"/>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- HEADER -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- Animated Logo -->
+                <FrameLayout
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_marginEnd="14dp">
+
+                    <View
+                        android:id="@+id/logoPulse"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_logo_pulse"/>
+
+                    <TextView
+                        android:id="@+id/logoIcon"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_gravity="center"
+                        android:gravity="center"
+                        android:background="@drawable/bg_copyright_free"
+                        android:backgroundTint="@color/colorPrimary"
+                        android:textColor="@color/colorPrimary"
+                        android:textSize="32sp"/>
+                    <!--android:text="⬡"-->
+
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/app_name"
+                        android:textColor="@color/text_primary"
+                        android:textSize="24sp"
+                        android:textStyle="bold"/>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <View
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:background="@drawable/bg_status_dot"
+                            android:layout_marginEnd="6dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="100% অফলাইন · সম্পূর্ণ নিরাপদ"
+                            android:textColor="@color/colorAccent2"
+                            android:textSize="11sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Info Button -->
+                <ImageButton
+                    android:id="@+id/btnInfo"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:src="@drawable/ic_info"
+                    app:tint="@color/colorPrimary"
+                    android:contentDescription="Info"/>
+            </LinearLayout>
+
+            <!-- Stats Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:background="@drawable/bg_stats_bar"
+                android:padding="12dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="26+"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/colorPrimary"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ট্রান্সফর্ম"
+                        android:textSize="10sp"
+                        android:textColor="@color/text_muted"/>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="30dp"
+                    android:background="@color/text_muted"
+                    android:alpha="0.3"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="98%"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/colorAccent2"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="বাইপাস রেট"
+                        android:textSize="10sp"
+                        android:textColor="@color/text_muted"/>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="30dp"
+                    android:background="@color/text_muted"
+                    android:alpha="0.3"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#4CAF50"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="কপিরাইট রিস্ক"
+                        android:textSize="10sp"
+                        android:textColor="@color/text_muted"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- STEP 1: VIDEO UPLOAD -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="@color/card_dark"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Section Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <TextView
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:gravity="center"
+                            android:text="1"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white"
+                            android:background="@drawable/bg_step_number"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:text="ভিডিও সিলেক্ট করুন"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold"/>
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"/>
+
+                        <TextView
+                            android:id="@+id/step1Status"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⏳ অপেক্ষমান"
+                            android:textSize="11sp"
+                            android:textColor="@color/text_muted"/>
+                    </LinearLayout>
+
+                    <!-- Drop Zone -->
+                    <FrameLayout
+                        android:id="@+id/dropZone"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_drop_zone"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="32dp">
+
+                            <!-- Animated Upload Icon -->
+                            <FrameLayout
+                                android:layout_width="80dp"
+                                android:layout_height="80dp"
+                                android:layout_marginBottom="16dp">
+
+                                <View
+                                    android:id="@+id/uploadPulse"
+                                    android:layout_width="80dp"
+                                    android:layout_height="80dp"
+                                    android:background="@drawable/bg_upload_pulse"
+                                    android:alpha="0.5"/>
+
+                                <TextView
+                                    android:id="@+id/uploadIcon"
+                                    android:layout_width="60dp"
+                                    android:layout_height="60dp"
+                                    android:layout_gravity="center"
+                                    android:gravity="center"
+                                    android:text="📁"
+                                    android:textSize="36sp"/>
+                            </FrameLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="6dp"
+                                android:gravity="center"
+                                android:text="ভিডিও ফাইল আপলোড করুন"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp"
+                                android:textStyle="bold"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="16dp"
+                                android:gravity="center"
+                                android:text="MP4, MKV, AVI সাপোর্টেড · সর্বোচ্চ 2GB"
+                                android:textColor="@color/text_muted"
+                                android:textSize="12sp"/>
+
+                            <Button
+                                android:id="@+id/selectVideoBtn"
+                                android:layout_width="wrap_content"
+                                android:layout_height="48dp"
+                                android:paddingHorizontal="32dp"
+                                android:text="📂  ভিডিও বেছে নিন"
+                                android:textColor="@color/white"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textAllCaps="false"
+                                android:background="@drawable/bg_button_gradient"/>
+                        </LinearLayout>
+                    </FrameLayout>
+
+                    <!-- File Info (Initially Hidden) -->
+                    <LinearLayout
+                        android:id="@+id/fileInfoLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_file_info"
+                        android:gravity="center_vertical"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <!-- Video Thumbnail -->
+                            <androidx.cardview.widget.CardView
+                                android:layout_width="110dp"
+                                android:layout_height="70dp"
+                                app:cardCornerRadius="8dp"
+                                app:cardElevation="4dp">
+
+                                <FrameLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent">
+
+                                    <ImageView
+                                        android:id="@+id/previewThumbnail"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        android:background="@color/black"
+                                        android:scaleType="centerCrop"/>
+
+                                    <!-- Play Overlay -->
+                                    <FrameLayout
+                                        android:layout_width="32dp"
+                                        android:layout_height="32dp"
+                                        android:layout_gravity="center"
+                                        android:background="@drawable/bg_play_button_small">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_gravity="center"
+                                            android:text="▶"
+                                            android:textColor="@color/white"
+                                            android:textSize="12sp"/>
+                                    </FrameLayout>
+                                </FrameLayout>
+                            </androidx.cardview.widget.CardView>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="14dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/fileNameText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold"/>
+
+                                <TextView
+                                    android:id="@+id/fileDetailText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="12sp"/>
+
+                                <!-- Success Badge -->
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="6dp"
+                                    android:paddingHorizontal="10dp"
+                                    android:paddingVertical="4dp"
+                                    android:background="@drawable/bg_success_badge"
+                                    android:text="✓ লোড সফল"
+                                    android:textColor="#4CAF50"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/changeVideoBtn"
+                            style="?attr/borderlessButtonStyle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="🔄 অন্য ভিডিও নিন"
+                            android:textColor="@color/colorPrimary"
+                            android:textSize="13sp"
+                            android:textAllCaps="false"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- OPTIONS (Initially Hidden) -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/optionsLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- STEP 2: RESOLUTION & RATIO (Collapsible) -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="@color/card_dark"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Collapsible Header -->
+                        <LinearLayout
+                            android:id="@+id/outputHeader"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="20dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:gravity="center"
+                                android:text="2"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/white"
+                                android:background="@drawable/bg_step_number"/>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="📐 আউটপুট সেটিংস"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"/>
+
+                                <TextView
+                                    android:id="@+id/outputSummary"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="অরিজিনাল রেজুলেশন · অরিজিনাল রেশিও"
+                                    android:textColor="@color/colorAccent2"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/outputToggle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▼"
+                                android:textSize="14sp"
+                                android:textColor="@color/text_muted"/>
+                        </LinearLayout>
+
+                        <!-- Output Content (Collapsible) -->
+                        <LinearLayout
+                            android:id="@+id/outputContent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="20dp"
+                            android:paddingBottom="20dp"
+                            android:visibility="gone">
+
+                            <!-- Resolution -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginBottom="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🖼️"
+                                    android:textSize="18sp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:text="রেজুলেশন"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold"/>
+                            </LinearLayout>
+
+                            <com.google.android.material.chip.ChipGroup
+                                android:id="@+id/resolutionGroup"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="20dp"
+                                app:singleSelection="true"
+                                app:selectionRequired="true"
+                                app:chipSpacingHorizontal="8dp">
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipOriginal"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true"
+                                    android:text="অরিজিনাল"/>
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chip1080p"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="1080p"/>
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chip720p"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="720p"/>
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chip480p"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="480p"/>
+                            </com.google.android.material.chip.ChipGroup>
+
+                            <!-- Aspect Ratio -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginBottom="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="📐"
+                                    android:textSize="18sp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:text="অ্যাসপেক্ট রেশিও"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold"/>
+                            </LinearLayout>
+
+                            <com.google.android.material.chip.ChipGroup
+                                android:id="@+id/ratioGroup"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:singleSelection="true"
+                                app:selectionRequired="true"
+                                app:chipSpacingHorizontal="8dp">
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipRatioOriginal"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true"
+                                    android:text="অরিজিনাল"/>
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chip16_9"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="16:9"/>
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chip9_16"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="9:16"/>
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chip1_1"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="1:1"/>
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chip4_3"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="4:3"/>
+                            </com.google.android.material.chip.ChipGroup>
+
+                            <!-- Quick Info Box -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:background="@drawable/bg_info_box"
+                                android:padding="12dp"
+                                android:layout_marginTop="8dp"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="💡"
+                                    android:textSize="16sp"/>
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="8dp"
+                                    android:text="ছোট রেজুলেশন = দ্রুত প্রসেসিং ও ছোট ফাইল সাইজ"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp"/>
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- STEP 3: TRANSFORMS (Collapsible) -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="@color/card_dark"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Collapsible Header -->
+                        <LinearLayout
+                            android:id="@+id/transformHeader"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="20dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:gravity="center"
+                                android:text="3"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/white"
+                                android:background="@drawable/bg_step_number"/>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🔒 কপিরাইট বাইপাস ট্রান্সফর্ম"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"/>
+
+                                <TextView
+                                    android:id="@+id/transformCount"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="26 টি ট্রান্সফর্ম · সব ON"
+                                    android:textColor="@color/colorAccent2"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/transformToggle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▼"
+                                android:textSize="14sp"
+                                android:textColor="@color/text_muted"/>
+                        </LinearLayout>
+
+                        <!-- Transform Content (Collapsible) -->
+                        <LinearLayout
+                            android:id="@+id/transformContent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="20dp"
+                            android:paddingBottom="20dp"
+                            android:visibility="gone">
+
+                            <!-- Quick Actions -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="12dp">
+
+                                <Button
+                                    android:id="@+id/btnEnableAll"
+                                    style="?attr/borderlessButtonStyle"
+                                    android:layout_width="0dp"
+                                    android:layout_height="36dp"
+                                    android:layout_weight="1"
+                                    android:text="✓ সব ON"
+                                    android:textColor="@color/colorAccent2"
+                                    android:textSize="12sp"
+                                    android:background="@drawable/bg_quick_action"
+                                    android:layout_marginEnd="8dp"
+                                    android:textAllCaps="false"/>
+
+                                <Button
+                                    android:id="@+id/btnDisableAll"
+                                    style="?attr/borderlessButtonStyle"
+                                    android:layout_width="0dp"
+                                    android:layout_height="36dp"
+                                    android:layout_weight="1"
+                                    android:text="✕ সব OFF"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="12sp"
+                                    android:background="@drawable/bg_quick_action"
+                                    android:textAllCaps="false"/>
+                            </LinearLayout>
+
+                            <!-- Preset Buttons -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="16dp">
+
+                                <Button
+                                    android:id="@+id/btnPresetMax"
+                                    style="?attr/borderlessButtonStyle"
+                                    android:layout_width="0dp"
+                                    android:layout_height="32dp"
+                                    android:layout_weight="1"
+                                    android:text="🔥 Max"
+                                    android:textColor="#FF5722"
+                                    android:textSize="10sp"
+                                    android:background="@drawable/bg_preset_button"
+                                    android:layout_marginEnd="4dp"
+                                    android:textAllCaps="false"/>
+
+                                <Button
+                                    android:id="@+id/btnPresetSubtle"
+                                    style="?attr/borderlessButtonStyle"
+                                    android:layout_width="0dp"
+                                    android:layout_height="32dp"
+                                    android:layout_weight="1"
+                                    android:text="🌿 Subtle"
+                                    android:textColor="#4CAF50"
+                                    android:textSize="10sp"
+                                    android:background="@drawable/bg_preset_button"
+                                    android:layout_marginEnd="4dp"
+                                    android:textAllCaps="false"/>
+
+                                <Button
+                                    android:id="@+id/btnPresetAudio"
+                                    style="?attr/borderlessButtonStyle"
+                                    android:layout_width="0dp"
+                                    android:layout_height="32dp"
+                                    android:layout_weight="1"
+                                    android:text="🎵 Audio"
+                                    android:textColor="#2196F3"
+                                    android:textSize="10sp"
+                                    android:background="@drawable/bg_preset_button"
+                                    android:layout_marginEnd="4dp"
+                                    android:textAllCaps="false"/>
+
+                                <Button
+                                    android:id="@+id/btnPresetVideo"
+                                    style="?attr/borderlessButtonStyle"
+                                    android:layout_width="0dp"
+                                    android:layout_height="32dp"
+                                    android:layout_weight="1"
+                                    android:text="🎬 Video"
+                                    android:textColor="#9C27B0"
+                                    android:textSize="10sp"
+                                    android:background="@drawable/bg_preset_button"
+                                    android:textAllCaps="false"/>
+                            </LinearLayout>
+
+                            <!-- Transform Items Grid -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+
+                                <!-- All 26 Transforms -->
+                                <include layout="@layout/item_transform_flip"/>
+                                <include layout="@layout/item_transform_border_progress"/>
+                                <include layout="@layout/item_transform_speed"/>
+                                <include layout="@layout/item_transform_hue"/>
+                                <include layout="@layout/item_transform_bright"/>
+                                <include layout="@layout/item_transform_saturation"/>
+                                <include layout="@layout/item_transform_zoom"/>
+                                <include layout="@layout/item_transform_rotate"/>
+                                <include layout="@layout/item_transform_gamma"/>
+                                <include layout="@layout/item_transform_noise"/>
+                                <include layout="@layout/item_transform_vignette"/>
+                                <include layout="@layout/item_transform_border"/>
+                                <include layout="@layout/item_transform_tint"/>
+                                <include layout="@layout/item_transform_pixelshift"/>
+                                <include layout="@layout/item_transform_sharpen"/>
+                                <include layout="@layout/item_transform_trim"/>
+                                <include layout="@layout/item_transform_volume"/>
+                                <include layout="@layout/item_transform_blur"/>
+                                <include layout="@layout/item_transform_sepia"/>
+                                <include layout="@layout/item_transform_chromatic"/>
+                                <include layout="@layout/item_transform_barrel"/>
+                                <include layout="@layout/item_transform_pitch"/>
+                                <include layout="@layout/item_spectral_noise"/>
+                                <include layout="@layout/item_temporal_jitter"/>
+                                <include layout="@layout/item_ambient_noise"/>
+                                <include layout="@layout/item_bitrate_randomization"/>
+
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- STEP 4: WATERMARK (Collapsible) -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="@color/card_dark"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Collapsible Header -->
+                        <LinearLayout
+                            android:id="@+id/watermarkHeader"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="20dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:gravity="center"
+                                android:text="4"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/white"
+                                android:background="@drawable/bg_step_number"/>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🎨 লোগো ও ওয়াটারমার্ক"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"/>
+
+                                <TextView
+                                    android:id="@+id/watermarkSummary"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="ঐচ্ছিক · ব্র্যান্ডিং যোগ করুন"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/watermarkToggle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▼"
+                                android:textSize="14sp"
+                                android:textColor="@color/text_muted"/>
+                        </LinearLayout>
+
+                        <!-- Watermark Content -->
+                        <LinearLayout
+                            android:id="@+id/watermarkContent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="20dp"
+                            android:paddingBottom="20dp"
+                            android:visibility="gone">
+
+                            <!-- Mode selector -->
+                            <com.google.android.material.chip.ChipGroup
+                                android:id="@+id/overlayModeGroup"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="16dp"
+                                app:singleSelection="true">
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipOverlayNone"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true"
+                                    android:text="কোনোটি নয়"/>
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipOverlayLogo"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🖼 লোগো"/>
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipOverlayText"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="✏️ টেক্সট"/>
+
+                                <com.google.android.material.chip.Chip
+                                    android:id="@+id/chipOverlayBoth"
+                                    style="@style/CustomChipChoice"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="উভয়"/>
+                            </com.google.android.material.chip.ChipGroup>
+
+                            <!-- Logo Section -->
+                            <include layout="@layout/section_logo"/>
+
+                            <!-- Text Section -->
+                            <include layout="@layout/section_watermark_text"/>
+
+                            <!-- Dynamic Watermark Option -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:background="@drawable/bg_transform_item"
+                                android:padding="12dp"
+                                android:layout_marginTop="16dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="🔄"
+                                        android:textSize="18sp"/>
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical"
+                                        android:layout_marginStart="10dp">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Dynamic Position"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="13sp"
+                                            android:textStyle="bold"/>
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="প্রতি কয়েক সেকেন্ডে পজিশন চেঞ্জ"
+                                            android:textColor="@color/text_muted"
+                                            android:textSize="10sp"/>
+                                    </LinearLayout>
+
+                                    <androidx.appcompat.widget.SwitchCompat
+                                        android:id="@+id/swDynamicWatermark"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:checked="false"/>
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:layout_marginTop="8dp">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="ইন্টারভাল:"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="11sp"/>
+
+                                    <com.google.android.material.slider.Slider
+                                        android:id="@+id/slWatermarkInterval"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:layout_marginHorizontal="8dp"
+                                        android:valueFrom="3"
+                                        android:valueTo="15"
+                                        android:value="5"
+                                        android:stepSize="1"
+                                        android:enabled="false"
+                                        android:alpha="0.5"
+                                        app:trackColorActive="@color/colorPrimary"
+                                        app:trackColorInactive="@color/text_muted"
+                                        app:thumbColor="@color/colorPrimary"/>
+
+                                    <TextView
+                                        android:id="@+id/tvWatermarkIntervalValue"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="5 সেকেন্ড"
+                                        android:textColor="@color/colorAccent2"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold"/>
+                                </LinearLayout>
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- STEP 5: LOGO REMOVER (Auto + Manual) -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="@color/card_dark"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Collapsible Header -->
+                        <LinearLayout
+                            android:id="@+id/logoRemoverHeader"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="20dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:gravity="center"
+                                android:text="5"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/white"
+                                android:background="@drawable/bg_step_number"/>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🚫 লোগো ও ওয়াটারমার্ক রিমুভার"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"/>
+
+                                <TextView
+                                    android:id="@+id/logoRemoverSummary"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Manual · ভিডিও থেকে লোগো মুছুন"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/logoRemoverToggle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▼"
+                                android:textSize="14sp"
+                                android:textColor="@color/text_muted"/>
+                        </LinearLayout>
+
+                        <!-- Logo Remover Content (Collapsible) -->
+                        <LinearLayout
+                            android:id="@+id/logoRemoverContent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="20dp"
+                            android:paddingBottom="20dp"
+                            android:visibility="gone">
+
+                            <!-- ═══════════════════════════════════════════════════════ -->
+                            <!-- MANUAL OVERRIDE SECTION -->
+                            <!-- ═══════════════════════════════════════════════════════ -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:background="@drawable/bg_transform_item"
+                                android:padding="12dp"
+                                android:layout_marginBottom="16dp">
+
+                                <!-- Manual Override Toggle -->
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="🎯"
+                                        android:textSize="18sp"/>
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical"
+                                        android:layout_marginStart="10dp">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Manual Override"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="13sp"
+                                            android:textStyle="bold"/>
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="নিজে coordinates সেট করুন"
+                                            android:textColor="@color/text_muted"
+                                            android:textSize="10sp"/>
+                                    </LinearLayout>
+
+                                    <androidx.appcompat.widget.SwitchCompat
+                                        android:id="@+id/swManualLogoRemover"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:checked="false"/>
+                                </LinearLayout>
+
+                                <!-- Manual Settings -->
+                                <LinearLayout
+                                    android:id="@+id/manualRemovalSection"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:layout_marginTop="12dp"
+                                    android:alpha="0.5">
+
+                                    <!-- Area Coordinates -->
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="📍 Area Coordinates:"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="11sp"
+                                        android:layout_marginBottom="8dp"/>
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="vertical"
+                                        android:background="@drawable/bg_transform_item"
+                                        android:padding="8dp"
+                                        android:layout_marginBottom="12dp">
+
+                                        <!-- X Position -->
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:orientation="horizontal"
+                                            android:gravity="center_vertical"
+                                            android:layout_marginBottom="4dp">
+
+                                            <TextView
+                                                android:layout_width="50dp"
+                                                android:layout_height="wrap_content"
+                                                android:text="X:"
+                                                android:textColor="@color/text_muted"
+                                                android:textSize="10sp"/>
+
+                                            <com.google.android.material.slider.Slider
+                                                android:id="@+id/slRemovalX"
+                                                android:layout_width="0dp"
+                                                android:layout_height="wrap_content"
+                                                android:layout_weight="1"
+                                                android:valueFrom="0"
+                                                android:valueTo="1920"
+                                                android:value="0"
+                                                android:stepSize="1"
+                                                app:trackColorActive="@color/colorPrimary"
+                                                app:trackColorInactive="@color/text_muted"
+                                                app:thumbColor="@color/colorPrimary"/>
+
+                                            <TextView
+                                                android:id="@+id/removalXValue"
+                                                android:layout_width="50dp"
+                                                android:layout_height="wrap_content"
+                                                android:text="0px"
+                                                android:textColor="@color/colorAccent2"
+                                                android:textSize="10sp"
+                                                android:gravity="end"/>
+                                        </LinearLayout>
+
+                                        <!-- Y Position -->
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:orientation="horizontal"
+                                            android:gravity="center_vertical"
+                                            android:layout_marginBottom="4dp">
+
+                                            <TextView
+                                                android:layout_width="50dp"
+                                                android:layout_height="wrap_content"
+                                                android:text="Y:"
+                                                android:textColor="@color/text_muted"
+                                                android:textSize="10sp"/>
+
+                                            <com.google.android.material.slider.Slider
+                                                android:id="@+id/slRemovalY"
+                                                android:layout_width="0dp"
+                                                android:layout_height="wrap_content"
+                                                android:layout_weight="1"
+                                                android:valueFrom="0"
+                                                android:valueTo="1080"
+                                                android:value="0"
+                                                android:stepSize="1"
+                                                app:trackColorActive="@color/colorPrimary"
+                                                app:trackColorInactive="@color/text_muted"
+                                                app:thumbColor="@color/colorPrimary"/>
+
+                                            <TextView
+                                                android:id="@+id/removalYValue"
+                                                android:layout_width="50dp"
+                                                android:layout_height="wrap_content"
+                                                android:text="0px"
+                                                android:textColor="@color/colorAccent2"
+                                                android:textSize="10sp"
+                                                android:gravity="end"/>
+                                        </LinearLayout>
+
+                                        <!-- Width -->
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:orientation="horizontal"
+                                            android:gravity="center_vertical"
+                                            android:layout_marginBottom="4dp">
+
+                                            <TextView
+                                                android:layout_width="50dp"
+                                                android:layout_height="wrap_content"
+                                                android:text="Width:"
+                                                android:textColor="@color/text_muted"
+                                                android:textSize="10sp"/>
+
+                                            <com.google.android.material.slider.Slider
+                                                android:id="@+id/slRemovalWidth"
+                                                android:layout_width="0dp"
+                                                android:layout_height="wrap_content"
+                                                android:layout_weight="1"
+                                                android:valueFrom="10"
+                                                android:valueTo="500"
+                                                android:value="100"
+                                                android:stepSize="1"
+                                                app:trackColorActive="@color/colorPrimary"
+                                                app:trackColorInactive="@color/text_muted"
+                                                app:thumbColor="@color/colorPrimary"/>
+
+                                            <TextView
+                                                android:id="@+id/removalWidthValue"
+                                                android:layout_width="50dp"
+                                                android:layout_height="wrap_content"
+                                                android:text="100px"
+                                                android:textColor="@color/colorAccent2"
+                                                android:textSize="10sp"
+                                                android:gravity="end"/>
+                                        </LinearLayout>
+
+                                        <!-- Height -->
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:orientation="horizontal"
+                                            android:gravity="center_vertical">
+
+                                            <TextView
+                                                android:layout_width="50dp"
+                                                android:layout_height="wrap_content"
+                                                android:text="Height:"
+                                                android:textColor="@color/text_muted"
+                                                android:textSize="10sp"/>
+
+                                            <com.google.android.material.slider.Slider
+                                                android:id="@+id/slRemovalHeight"
+                                                android:layout_width="0dp"
+                                                android:layout_height="wrap_content"
+                                                android:layout_weight="1"
+                                                android:valueFrom="10"
+                                                android:valueTo="500"
+                                                android:value="100"
+                                                android:stepSize="1"
+                                                app:trackColorActive="@color/colorPrimary"
+                                                app:trackColorInactive="@color/text_muted"
+                                                app:thumbColor="@color/colorPrimary"/>
+
+                                            <TextView
+                                                android:id="@+id/removalHeightValue"
+                                                android:layout_width="50dp"
+                                                android:layout_height="wrap_content"
+                                                android:text="100px"
+                                                android:textColor="@color/colorAccent2"
+                                                android:textSize="10sp"
+                                                android:gravity="end"/>
+                                        </LinearLayout>
+                                    </LinearLayout>
+
+                                    <!-- Quick Positions -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="⚡ Quick:"
+                                            android:textColor="@color/text_muted"
+                                            android:textSize="10sp"
+                                            android:layout_marginEnd="8dp"
+                                            android:gravity="center_vertical"/>
+
+                                        <Button
+                                            android:id="@+id/btnLogoTopLeft"
+                                            style="?attr/borderlessButtonStyle"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:text="↖️"
+                                            android:textSize="14sp"
+                                            android:background="@drawable/bg_preset_button"
+                                            android:layout_marginEnd="4dp"/>
+
+                                        <Button
+                                            android:id="@+id/btnLogoTopRight"
+                                            style="?attr/borderlessButtonStyle"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:text="↗️"
+                                            android:textSize="14sp"
+                                            android:background="@drawable/bg_preset_button"
+                                            android:layout_marginEnd="4dp"/>
+
+                                        <Button
+                                            android:id="@+id/btnLogoBottomLeft"
+                                            style="?attr/borderlessButtonStyle"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:text="↙️"
+                                            android:textSize="14sp"
+                                            android:background="@drawable/bg_preset_button"
+                                            android:layout_marginEnd="4dp"/>
+
+                                        <Button
+                                            android:id="@+id/btnLogoBottomRight"
+                                            style="?attr/borderlessButtonStyle"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:text="↘️"
+                                            android:textSize="14sp"
+                                            android:background="@drawable/bg_preset_button"/>
+                                    </LinearLayout>
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- ═══════════════════════════════════════════════════════ -->
+                            <!-- REMOVAL METHOD (Common for both) -->
+                            <!-- ═══════════════════════════════════════════════════════ -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🔧 Removal Method:"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp"
+                                    android:layout_marginBottom="8dp"/>
+
+                                <com.google.android.material.chip.ChipGroup
+                                    android:id="@+id/removalMethodGroup"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginBottom="12dp"
+                                    app:singleSelection="true"
+                                    app:selectionRequired="true">
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/chipMethodBlur"
+                                        style="@style/CustomChipChoice"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:checked="true"
+                                        android:text="🌫️ Blur"/>
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/chipMethodBlackout"
+                                        style="@style/CustomChipChoice"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="⬛ Blackout"/>
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/chipMethodPixelate"
+                                        style="@style/CustomChipChoice"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="🔲 Pixelate"/>
+                                </com.google.android.material.chip.ChipGroup>
+
+                                <!-- Blur Intensity -->
+                                <LinearLayout
+                                    android:id="@+id/blurIntensitySection"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:background="@drawable/bg_transform_item"
+                                    android:padding="12dp"
+                                    android:visibility="visible">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Blur:"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="11sp"/>
+
+                                    <com.google.android.material.slider.Slider
+                                        android:id="@+id/slRemovalBlur"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:layout_marginHorizontal="8dp"
+                                        android:valueFrom="5"
+                                        android:valueTo="50"
+                                        android:value="15"
+                                        android:stepSize="1"
+                                        app:trackColorActive="@color/colorPrimary"
+                                        app:trackColorInactive="@color/text_muted"
+                                        app:thumbColor="@color/colorPrimary"/>
+
+                                    <TextView
+                                        android:id="@+id/removalBlurValue"
+                                        android:layout_width="50dp"
+                                        android:layout_height="wrap_content"
+                                        android:text="15px"
+                                        android:textColor="@color/colorAccent2"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold"
+                                        android:gravity="end"/>
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Info Box -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:background="@drawable/bg_info_box"
+                                android:padding="12dp"
+                                android:layout_marginTop="12dp"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="💡"
+                                    android:textSize="16sp"/>
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="8dp"
+                                    android:text="Manual enabled থাকলে fallback হিসেবে সেই coordinates use হবে।"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="10sp"/>
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- START BUTTON -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="@android:color/transparent"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <!-- Preview Box -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:background="@drawable/bg_preview_box"
+                            android:padding="16dp"
+                            android:layout_marginBottom="16dp"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🎯"
+                                android:textSize="24sp"/>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="প্রসেসিং সামারি"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold"/>
+
+                                <TextView
+                                    android:id="@+id/processSummary"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="26 ট্রান্সফর্ম · অরিজিনাল রেজুলেশন"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="12sp"
+                                    android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="✓"
+                                android:textSize="18sp"
+                                android:textColor="@color/colorAccent2"/>
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/startProcessBtn"
+                            android:layout_width="match_parent"
+                            android:layout_height="60dp"
+                            android:background="@drawable/bg_start_button"
+                            android:text="⚡ প্রসেস শুরু করুন"
+                            android:textColor="@color/white"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textAllCaps="false"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="🔒 সম্পূর্ণ অফলাইন প্রসেসিং · কোনো ডাটা আপলোড হয় না"
+                            android:textColor="@color/text_muted"
+                            android:textSize="10sp"
+                            android:gravity="center"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- Footer -->
+            <LinearLayout
+                android:id="@+id/btnCheckCopyright"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Made with ❤️ for Content Creators"
+                    android:textColor="@color/text_muted"
+                    android:textSize="11sp"
+                    android:alpha="0.7"/>
+
+                <TextView
+                    android:id="@+id/tvAppVersion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="v3.0.0 · Enhanced"
+                    android:textColor="@color/text_muted"
+                    android:textSize="10sp"
+                    android:alpha="0.5"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
