@@ -56,7 +56,6 @@ public class ProcessActivity extends AppCompatActivity {
 
     private static final String TAG = "ProcessActivity";
 
-    // Processing Views
     private LinearLayout processingLayout, doneLayout;
     private ProgressBar progressBar, outerRing;
     private TextView progressText, currentStage, tipText, tipIcon;
@@ -67,7 +66,6 @@ public class ProcessActivity extends AppCompatActivity {
     private ScrollView logScrollView;
     private TextView logText, logToggle;
 
-    // Done Views
     private FrameLayout thumbnailContainer;
     private ImageView videoThumbnail;
     private TextView videoDuration, outputFileSize, outputResolutionDone, totalFrames, totalAudioFrames;
@@ -88,11 +86,10 @@ public class ProcessActivity extends AppCompatActivity {
     private boolean logExpanded = false;
     private volatile boolean isProcessing = false;
 
-    // WakeLock — screen on & CPU alive during processing
     private PowerManager.WakeLock wakeLock;
 
-    // Tips
     private final String[] tips = {
+            "💡 দ্রুত রেন্ডারিং-এর জন্য এই ট্যাবটি খোলা রাখুন",
             "💡 AI টেকনোলজি ব্যবহার করে ভিডিও ইউনিক করা হচ্ছে",
             "🎨 পিক্সেল লেভেলে পরিবর্তন হচ্ছে",
             "🔊 অডিও ফিঙ্গারপ্রিন্ট পরিবর্তন হচ্ছে",
@@ -102,19 +99,19 @@ public class ProcessActivity extends AppCompatActivity {
             "📊 ভিডিও কোয়ালিটি অপটিমাইজ হচ্ছে",
             "🎯 কন্টেন্ট আইডি এড়ানো হচ্ছে"
     };
-    private final String[] tipIcons = {"💡", "🎨", "🔊", "🎬", "✨", "🛡️", "📊", "🎯"};
+    private final String[] tipIcons = {"💡", "💡", "🎨", "🔊", "🎬", "✨", "🛡️", "📊", "🎯"};
     private int currentTipIndex = 0;
     private Handler tipHandler;
     private Runnable tipRunnable;
 
-    // Smooth progress
+    // Real synced progress
     private int currentDisplayedProgress = 0;
-    private volatile int targetProgress = 0;
-    private final Handler progressHandler = new Handler(Looper.getMainLooper());
-    private boolean progressTickRunning = false;
-    private static final int TICK_MS = 30;
 
-    // Dialog components
+    // Throttle UI/log updates
+    private long lastUiRefreshTime = 0L;
+    private long lastLogTime = 0L;
+    private String lastLogMessage = "";
+
     private Dialog videoDialog;
     private VideoView dialogVideoView;
     private Handler seekHandler;
@@ -134,8 +131,6 @@ public class ProcessActivity extends AppCompatActivity {
         getIntentData();
         setupAnimations();
         startTipRotation();
-
-        // ★ FIX #1: Setup back press handler
         setupBackPressHandler();
 
         if (inputVideoUri == null) {
@@ -145,8 +140,10 @@ public class ProcessActivity extends AppCompatActivity {
 
         try {
             android.database.Cursor cursor = getContentResolver().query(
-                    inputVideoUri, new String[]{android.provider.OpenableColumns.SIZE},
-                    null, null, null);
+                    inputVideoUri,
+                    new String[]{android.provider.OpenableColumns.SIZE},
+                    null, null, null
+            );
             if (cursor != null && cursor.moveToFirst()) {
                 long size = cursor.getLong(0);
                 inputFileSize.setText(formatSize(size));
@@ -158,10 +155,9 @@ public class ProcessActivity extends AppCompatActivity {
         }
 
         addLog("🎬 ভিডিও লোড হয়েছে");
-        mainHandler.postDelayed(this::startProcessing, 500);
+        mainHandler.postDelayed(this::startProcessing, 400);
     }
 
-    // ★ FIX #1: OnBackPressedCallback replaces deprecated onBackPressed()
     private void setupBackPressHandler() {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -172,10 +168,8 @@ public class ProcessActivity extends AppCompatActivity {
                 }
 
                 if (doneLayout != null && doneLayout.getVisibility() == View.VISIBLE) {
-                    // Processing complete, allow exit
                     cleanupAndFinish();
                 } else if (isProcessing) {
-                    // Show confirmation dialog
                     showExitConfirmation();
                 } else {
                     cleanupAndFinish();
@@ -184,7 +178,6 @@ public class ProcessActivity extends AppCompatActivity {
         });
     }
 
-    // ★ FIX #2: Show confirmation before canceling processing
     private void showExitConfirmation() {
         new android.app.AlertDialog.Builder(this)
                 .setTitle("প্রসেসিং বন্ধ করবেন?")
@@ -252,22 +245,22 @@ public class ProcessActivity extends AppCompatActivity {
         shareBtn.setOnClickListener(v -> shareVideo());
         newVideoBtn.setOnClickListener(v -> cleanupAndFinish());
 
-        logText.setText("");
+        if (logText != null) logText.setText("");
     }
 
     private void toggleLog() {
         logExpanded = !logExpanded;
-        logScrollView.setVisibility(logExpanded ? View.VISIBLE : View.GONE);
-        logToggle.setText(logExpanded ? "▲" : "▼");
+        if (logScrollView != null) logScrollView.setVisibility(logExpanded ? View.VISIBLE : View.GONE);
+        if (logToggle != null) logToggle.setText(logExpanded ? "▲" : "▼");
     }
 
     private void setupAnimations() {
         TextView processingIcon = findViewById(R.id.processingIcon);
         if (processingIcon != null) {
-            ObjectAnimator pulse = ObjectAnimator.ofFloat(processingIcon, "scaleX", 1f, 1.2f, 1f);
-            pulse.setDuration(1000);
-            pulse.setRepeatCount(ValueAnimator.INFINITE);
-            pulse.start();
+            ObjectAnimator pulseX = ObjectAnimator.ofFloat(processingIcon, "scaleX", 1f, 1.2f, 1f);
+            pulseX.setDuration(1000);
+            pulseX.setRepeatCount(ValueAnimator.INFINITE);
+            pulseX.start();
 
             ObjectAnimator pulseY = ObjectAnimator.ofFloat(processingIcon, "scaleY", 1f, 1.2f, 1f);
             pulseY.setDuration(1000);
@@ -280,11 +273,13 @@ public class ProcessActivity extends AppCompatActivity {
         tipRunnable = new Runnable() {
             @Override
             public void run() {
-                if (tipText == null) return;
+                if (tipText == null || tipIcon == null) return;
+                if (tips.length == 0 || tipIcons.length == 0) return;
+
+                int safeLength = Math.min(tips.length, tipIcons.length);
 
                 tipText.animate().alpha(0f).setDuration(300).withEndAction(() -> {
-                    if (tipText == null || tipIcon == null) return;
-                    currentTipIndex = (currentTipIndex + 1) % tips.length;
+                    currentTipIndex = (currentTipIndex + 1) % safeLength;
                     tipText.setText(tips[currentTipIndex]);
                     tipIcon.setText(tipIcons[currentTipIndex]);
                     tipText.animate().alpha(1f).setDuration(300).start();
@@ -331,13 +326,13 @@ public class ProcessActivity extends AppCompatActivity {
     private void startProcessing() {
         isProcessing = true;
 
-        // Screen on + CPU running রাখো সম্পূর্ণ process শেষ না হওয়া পর্যন্ত
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null) {
             wakeLock = pm.newWakeLock(
                     PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ON_AFTER_RELEASE,
-                    "CopyrightFree:ProcessingWakeLock");
-            wakeLock.acquire(30 * 60 * 1000L); // max 30 min timeout (safety)
+                    "CopyrightFree:ProcessingWakeLock"
+            );
+            wakeLock.acquire(30 * 60 * 1000L);
         }
 
         addLog("🚀 প্রসেসিং শুরু হচ্ছে...");
@@ -352,11 +347,7 @@ public class ProcessActivity extends AppCompatActivity {
                     new VideoProcessorMediaCodec.ProgressCallback() {
                         @Override
                         public void onProgress(int percent, String message) {
-                            runOnUiThread(() -> {
-                                updateProgress(percent);
-                                parseAndUpdateUI(percent, message);
-                                addLog(message);
-                            });
+                            runOnUiThread(() -> handleProgressUpdate(percent, message));
                         }
 
                         @Override
@@ -388,6 +379,26 @@ public class ProcessActivity extends AppCompatActivity {
         }
     }
 
+    private void handleProgressUpdate(int percent, String message) {
+        updateProgress(percent);
+
+        long now = System.currentTimeMillis();
+
+        if (now - lastUiRefreshTime >= 200 || percent >= 100 || message.contains("×")
+                || message.contains("ফ্রেম:") || message.contains("অডিও:")) {
+            parseAndUpdateUI(percent, message);
+            lastUiRefreshTime = now;
+        }
+
+        if (message != null && !message.trim().isEmpty()) {
+            if (!message.equals(lastLogMessage) || (now - lastLogTime) >= 700) {
+                addLog(message);
+                lastLogMessage = message;
+                lastLogTime = now;
+            }
+        }
+    }
+
     private void releaseWakeLock() {
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
@@ -406,17 +417,17 @@ public class ProcessActivity extends AppCompatActivity {
             updateStage(4, "ফাইনালাইজ হচ্ছে...");
         }
 
-        if (message.contains("ফ্রেম:")) {
+        if (message != null && message.contains("ফ্রেম:")) {
             try {
                 String[] parts = message.split(":");
                 if (parts.length > 1) {
                     processedFrames = Integer.parseInt(parts[1].trim());
-                    frameCount.setText(String.valueOf(processedFrames));
+                    if (frameCount != null) frameCount.setText(String.valueOf(processedFrames));
                 }
             } catch (Exception ignored) {}
         }
 
-        if (message.contains("অডিও:")) {
+        if (message != null && message.contains("অডিও:")) {
             try {
                 String[] parts = message.split(":");
                 if (parts.length > 1) {
@@ -428,63 +439,45 @@ public class ProcessActivity extends AppCompatActivity {
             } catch (Exception ignored) {}
         }
 
-        if (message.contains("×")) {
-            outputResolution.setText(message);
+        if (message != null && message.contains("×")) {
+            if (outputResolution != null) outputResolution.setText(message);
         }
     }
 
     private void updateStage(int stage, String text) {
-        currentStage.setText(text);
+        if (currentStage != null) currentStage.setText(text);
 
-        stage1.setBackgroundResource(stage >= 1 ? R.drawable.stage_dot_active : R.drawable.stage_dot_inactive);
-        stage2.setBackgroundResource(stage >= 2 ? R.drawable.stage_dot_active : R.drawable.stage_dot_inactive);
-        stage3.setBackgroundResource(stage >= 3 ? R.drawable.stage_dot_active : R.drawable.stage_dot_inactive);
-        stage4.setBackgroundResource(stage >= 4 ? R.drawable.stage_dot_active : R.drawable.stage_dot_inactive);
+        if (stage1 != null) stage1.setBackgroundResource(stage >= 1 ? R.drawable.stage_dot_active : R.drawable.stage_dot_inactive);
+        if (stage2 != null) stage2.setBackgroundResource(stage >= 2 ? R.drawable.stage_dot_active : R.drawable.stage_dot_inactive);
+        if (stage3 != null) stage3.setBackgroundResource(stage >= 3 ? R.drawable.stage_dot_active : R.drawable.stage_dot_inactive);
+        if (stage4 != null) stage4.setBackgroundResource(stage >= 4 ? R.drawable.stage_dot_active : R.drawable.stage_dot_inactive);
 
-        // ★ FIX #3: ContextCompat instead of deprecated getResources().getColor()
         int activeColor = ContextCompat.getColor(this, R.color.colorAccent2);
         int inactiveColor = ContextCompat.getColor(this, R.color.text_muted);
 
-        stageLine1.setBackgroundColor(stage >= 2 ? activeColor : inactiveColor);
-        stageLine2.setBackgroundColor(stage >= 3 ? activeColor : inactiveColor);
-        stageLine3.setBackgroundColor(stage >= 4 ? activeColor : inactiveColor);
+        if (stageLine1 != null) stageLine1.setBackgroundColor(stage >= 2 ? activeColor : inactiveColor);
+        if (stageLine2 != null) stageLine2.setBackgroundColor(stage >= 3 ? activeColor : inactiveColor);
+        if (stageLine3 != null) stageLine3.setBackgroundColor(stage >= 4 ? activeColor : inactiveColor);
     }
 
     private void updateProgress(int target) {
-        target = Math.max(currentDisplayedProgress, Math.min(100, target));
-        targetProgress = target;
-        if (progressTickRunning) return;
-        progressTickRunning = true;
-        startProgressTick();
-    }
+        target = Math.max(0, Math.min(100, target));
 
-    private void startProgressTick() {
-        progressHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (currentDisplayedProgress < targetProgress) {
-                    currentDisplayedProgress++;
-                    if (progressBar != null) progressBar.setProgress(currentDisplayedProgress);
-                    if (progressText != null) progressText.setText(String.valueOf(currentDisplayedProgress));
-                    progressHandler.postDelayed(this, TICK_MS);
-                } else {
-                    progressHandler.postDelayed(() -> {
-                        if (currentDisplayedProgress < targetProgress) {
-                            startProgressTick();
-                        } else {
-                            progressTickRunning = false;
-                        }
-                    }, TICK_MS * 2);
-                }
-            }
-        }, TICK_MS);
+        if (target < currentDisplayedProgress) return;
+        currentDisplayedProgress = target;
+
+        if (progressBar != null) progressBar.setProgress(target);
+        if (outerRing != null) outerRing.setProgress(target);
+        if (progressText != null) progressText.setText(String.valueOf(target));
     }
 
     private void addLog(String message) {
         Log.d(TAG, message);
         if (logText != null) {
             logText.append(message + "\n");
-            logScrollView.post(() -> logScrollView.fullScroll(View.FOCUS_DOWN));
+            if (logExpanded && logScrollView != null) {
+                logScrollView.post(() -> logScrollView.fullScroll(View.FOCUS_DOWN));
+            }
         }
     }
 
@@ -502,19 +495,23 @@ public class ProcessActivity extends AppCompatActivity {
         updateProgress(100);
         updateStage(4, "✓ সম্পন্ন!");
 
-        processingLayout.animate()
-                .alpha(0f)
-                .setDuration(300)
-                .withEndAction(() -> {
-                    processingLayout.setVisibility(View.GONE);
-                    doneLayout.setVisibility(View.VISIBLE);
-                    doneLayout.setAlpha(0f);
-                    doneLayout.animate().alpha(1f).setDuration(500).start();
+        if (processingLayout != null) {
+            processingLayout.animate()
+                    .alpha(0f)
+                    .setDuration(300)
+                    .withEndAction(() -> {
+                        processingLayout.setVisibility(View.GONE);
+                        if (doneLayout != null) {
+                            doneLayout.setVisibility(View.VISIBLE);
+                            doneLayout.setAlpha(0f);
+                            doneLayout.animate().alpha(1f).setDuration(500).start();
+                        }
 
-                    startSuccessAnimation();
-                    loadVideoThumbnail();
-                    loadVideoStats();
-                }).start();
+                        startSuccessAnimation();
+                        loadVideoThumbnail();
+                        loadVideoStats();
+                    }).start();
+        }
     }
 
     private void startSuccessAnimation() {
@@ -567,8 +564,7 @@ public class ProcessActivity extends AppCompatActivity {
                     thumbnailBitmap = retriever.getFrameAtTime(0);
                 }
 
-                String durationStr = retriever.extractMetadata(
-                        MediaMetadataRetriever.METADATA_KEY_DURATION);
+                String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
                 if (durationStr != null) {
                     videoDurationMs = Long.parseLong(durationStr);
                 }
@@ -666,8 +662,8 @@ public class ProcessActivity extends AppCompatActivity {
         TextView tvCurrentTime = videoDialog.findViewById(R.id.tvCurrentTime);
         TextView tvTotalTime = videoDialog.findViewById(R.id.tvTotalTime);
 
-        tvTotalTime.setText(formatDuration(videoDurationMs));
-        btnClose.setOnClickListener(v -> dismissVideoDialog());
+        if (tvTotalTime != null) tvTotalTime.setText(formatDuration(videoDurationMs));
+        if (btnClose != null) btnClose.setOnClickListener(v -> dismissVideoDialog());
 
         Uri videoUri;
         try {
@@ -684,72 +680,82 @@ public class ProcessActivity extends AppCompatActivity {
         dialogVideoView.setVideoURI(videoUri);
 
         dialogVideoView.setOnPreparedListener(mp -> {
-            loadingProgress.setVisibility(View.GONE);
-            seekBar.setMax(mp.getDuration());
-            tvTotalTime.setText(formatDuration(mp.getDuration()));
+            if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
+            if (seekBar != null) seekBar.setMax(mp.getDuration());
+            if (tvTotalTime != null) tvTotalTime.setText(formatDuration(mp.getDuration()));
             isPlaying = true;
-            btnPlayPause.setImageResource(R.drawable.ic_pause);
+            if (btnPlayPause != null) btnPlayPause.setImageResource(R.drawable.ic_pause);
             mp.start();
             startSeekBarUpdate(seekBar, tvCurrentTime);
         });
 
         dialogVideoView.setOnCompletionListener(mp -> {
             isPlaying = false;
-            btnPlayPause.setImageResource(R.drawable.ic_play);
+            if (btnPlayPause != null) btnPlayPause.setImageResource(R.drawable.ic_play);
             stopSeekBarUpdate();
-            seekBar.setProgress(0);
-            tvCurrentTime.setText("00:00");
+            if (seekBar != null) seekBar.setProgress(0);
+            if (tvCurrentTime != null) tvCurrentTime.setText("00:00");
         });
 
-        btnPlayPause.setOnClickListener(v -> {
-            if (dialogVideoView.isPlaying()) {
-                dialogVideoView.pause();
-                isPlaying = false;
-                btnPlayPause.setImageResource(R.drawable.ic_play);
-                stopSeekBarUpdate();
-            } else {
-                dialogVideoView.start();
-                isPlaying = true;
-                btnPlayPause.setImageResource(R.drawable.ic_pause);
-                startSeekBarUpdate(seekBar, tvCurrentTime);
-            }
-        });
+        if (btnPlayPause != null) {
+            btnPlayPause.setOnClickListener(v -> {
+                if (dialogVideoView.isPlaying()) {
+                    dialogVideoView.pause();
+                    isPlaying = false;
+                    btnPlayPause.setImageResource(R.drawable.ic_play);
+                    stopSeekBarUpdate();
+                } else {
+                    dialogVideoView.start();
+                    isPlaying = true;
+                    btnPlayPause.setImageResource(R.drawable.ic_pause);
+                    startSeekBarUpdate(seekBar, tvCurrentTime);
+                }
+            });
+        }
 
-        btnRewind.setOnClickListener(v -> {
-            int newPos = Math.max(0, dialogVideoView.getCurrentPosition() - 10000);
-            dialogVideoView.seekTo(newPos);
-            seekBar.setProgress(newPos);
-            tvCurrentTime.setText(formatDuration(newPos));
-        });
+        if (btnRewind != null) {
+            btnRewind.setOnClickListener(v -> {
+                int newPos = Math.max(0, dialogVideoView.getCurrentPosition() - 10000);
+                dialogVideoView.seekTo(newPos);
+                if (seekBar != null) seekBar.setProgress(newPos);
+                if (tvCurrentTime != null) tvCurrentTime.setText(formatDuration(newPos));
+            });
+        }
 
-        btnForward.setOnClickListener(v -> {
-            int newPos = Math.min(dialogVideoView.getDuration(),
-                    dialogVideoView.getCurrentPosition() + 10000);
-            dialogVideoView.seekTo(newPos);
-            seekBar.setProgress(newPos);
-            tvCurrentTime.setText(formatDuration(newPos));
-        });
+        if (btnForward != null) {
+            btnForward.setOnClickListener(v -> {
+                int newPos = Math.min(dialogVideoView.getDuration(),
+                        dialogVideoView.getCurrentPosition() + 10000);
+                dialogVideoView.seekTo(newPos);
+                if (seekBar != null) seekBar.setProgress(newPos);
+                if (tvCurrentTime != null) tvCurrentTime.setText(formatDuration(newPos));
+            });
+        }
 
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) tvCurrentTime.setText(formatDuration(progress));
-            }
+        if (seekBar != null) {
+            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (fromUser && tvCurrentTime != null) {
+                        tvCurrentTime.setText(formatDuration(progress));
+                    }
+                }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                stopSeekBarUpdate();
-            }
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                    stopSeekBarUpdate();
+                }
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                dialogVideoView.seekTo(seekBar.getProgress());
-                if (isPlaying) startSeekBarUpdate(seekBar, tvCurrentTime);
-            }
-        });
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    dialogVideoView.seekTo(seekBar.getProgress());
+                    if (isPlaying) startSeekBarUpdate(seekBar, tvCurrentTime);
+                }
+            });
+        }
 
         dialogVideoView.setOnErrorListener((mp, what, extra) -> {
-            loadingProgress.setVisibility(View.GONE);
+            if (loadingProgress != null) loadingProgress.setVisibility(View.GONE);
             Toast.makeText(this, "ভিডিও প্লে করা যাচ্ছে না", Toast.LENGTH_SHORT).show();
             return true;
         });
@@ -767,6 +773,8 @@ public class ProcessActivity extends AppCompatActivity {
     }
 
     private void startSeekBarUpdate(SeekBar seekBar, TextView tvCurrentTime) {
+        if (seekBar == null || tvCurrentTime == null) return;
+
         seekRunnable = new Runnable() {
             @Override
             public void run() {
@@ -782,26 +790,27 @@ public class ProcessActivity extends AppCompatActivity {
     }
 
     private void stopSeekBarUpdate() {
-        if (seekRunnable != null) seekHandler.removeCallbacks(seekRunnable);
+        if (seekRunnable != null) {
+            seekHandler.removeCallbacks(seekRunnable);
+        }
     }
 
     private void dismissVideoDialog() {
-        if (videoDialog != null && videoDialog.isShowing()) videoDialog.dismiss();
+        if (videoDialog != null && videoDialog.isShowing()) {
+            videoDialog.dismiss();
+        }
     }
-
-    // ProcessActivity.java
 
     private void saveToGallery() {
         if (outputPath == null) return;
 
-        // ★ ADD: Check WRITE permission (Android 9 এবং নিচে)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             if (!PermissionHelper.hasPermissions(this)) {
                 Toast.makeText(this, "Storage Permission নেই", Toast.LENGTH_SHORT).show();
                 PermissionHelper.requestPermissions(this, new PermissionHelper.PermissionCallback() {
                     @Override
                     public void onPermissionGranted() {
-                        saveToGallery(); // Retry after permission granted
+                        saveToGallery();
                     }
 
                     @Override
@@ -814,16 +823,20 @@ public class ProcessActivity extends AppCompatActivity {
             }
         }
 
-        downloadBtn.setEnabled(false);
-        downloadBtn.setText("⏳ সেভ হচ্ছে...");
+        if (downloadBtn != null) {
+            downloadBtn.setEnabled(false);
+            downloadBtn.setText("⏳ সেভ হচ্ছে...");
+        }
 
         new Thread(() -> {
             boolean success = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
                     ? saveToGalleryQ() : saveToGalleryLegacy();
 
             runOnUiThread(() -> {
-                downloadBtn.setEnabled(true);
-                downloadBtn.setText("📥  গ্যালারিতে সেভ করুন");
+                if (downloadBtn != null) {
+                    downloadBtn.setEnabled(true);
+                    downloadBtn.setText("📥  গ্যালারিতে সেভ করুন");
+                }
 
                 if (success) {
                     Toast.makeText(this, "✅ ভিডিও Gallery তে সেভ হয়েছে!", Toast.LENGTH_LONG).show();
@@ -923,11 +936,9 @@ public class ProcessActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        // শুধু video dialog pause করো — processing চলতে থাকবে
         if (videoDialog != null && videoDialog.isShowing() && dialogVideoView != null) {
             if (dialogVideoView.isPlaying()) dialogVideoView.pause();
         }
-        // Note: processor intentionally NOT cancelled here
     }
 
     @Override
@@ -938,8 +949,6 @@ public class ProcessActivity extends AppCompatActivity {
             processor.cancel();
         }
         releaseWakeLock();
-        progressHandler.removeCallbacksAndMessages(null);
-        progressTickRunning = false;
         stopTipRotation();
         stopSeekBarUpdate();
         dismissVideoDialog();

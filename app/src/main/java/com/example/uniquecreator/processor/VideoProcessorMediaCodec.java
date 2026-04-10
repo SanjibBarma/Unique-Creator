@@ -37,7 +37,6 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Random;
@@ -45,7 +44,8 @@ import java.util.Random;
 public class VideoProcessorMediaCodec {
 
     private static final String TAG = "VideoProcessor";
-    private static final int TIMEOUT_US = 10000;
+    private static final int TIMEOUT_US = 2500;
+    private static final int FRAME_WAIT_TIMEOUT_MS = 500;
 
     public interface ProgressCallback {
         void onProgress(int percent, String message);
@@ -72,6 +72,12 @@ public class VideoProcessorMediaCodec {
         new Thread(() -> {
             try {
                 doProcess(context, inputUri, resolution, aspectRatio, ts, wm, callback);
+            } catch (OutOfMemoryError oom) {
+                Log.e(TAG, "OOM during processing", oom);
+                System.gc();
+                if (!isCancelled) {
+                    callback.onError("মেমরি কম পড়েছে। ছোট ভিডিও বা কম রেজুলেশন ট্রাই করুন।");
+                }
             } catch (Exception e) {
                 Log.e(TAG, "Processing error", e);
                 if (!isCancelled) {
@@ -88,15 +94,11 @@ public class VideoProcessorMediaCodec {
         if (ts == null) ts = new TransformSettings();
         if (wm == null) wm = new WatermarkConfig();
 
-        // Thread-safe synchronization objects
         final Object frameSyncObject = new Object();
         final boolean[] frameAvailable = {false};
 
-        callback.onProgress(1, "ভিডিও বিশ্লেষণ...");
+        callback.onProgress(0, "ভিডিও বিশ্লেষণ...");
 
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 1: Extract video info
-        // ════════════════════════════════════════════════════════════════════
         MediaExtractor extractor = new MediaExtractor();
         extractor.setDataSource(context, inputUri, null);
 
@@ -119,7 +121,7 @@ public class VideoProcessorMediaCodec {
             }
         }
 
-        if (videoTrackIndex < 0) {
+        if (videoTrackIndex < 0 || videoFormat == null) {
             extractor.release();
             callback.onError("ভিডিও ট্র্যাক পাওয়া যায়নি");
             return;
@@ -129,18 +131,15 @@ public class VideoProcessorMediaCodec {
         int rawHeight = videoFormat.getInteger(MediaFormat.KEY_HEIGHT);
         String videoMime = videoFormat.getString(MediaFormat.KEY_MIME);
 
-        // Get duration from container
         long durationUs = 5_000_000L;
         MediaMetadataRetriever mmr = null;
         try {
             mmr = new MediaMetadataRetriever();
             mmr.setDataSource(context, inputUri);
             String durStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-            if (durStr != null) {
-                durationUs = Long.parseLong(durStr) * 1000L;
-            }
+            if (durStr != null) durationUs = Long.parseLong(durStr) * 1000L;
         } catch (Exception e) {
-            Log.w(TAG, "MMR duration failed, falling back to track", e);
+            Log.w(TAG, "MMR duration failed", e);
             if (videoFormat.containsKey(MediaFormat.KEY_DURATION)) {
                 durationUs = videoFormat.getLong(MediaFormat.KEY_DURATION);
             }
@@ -154,7 +153,6 @@ public class VideoProcessorMediaCodec {
             if (fr > 0 && fr <= 120) frameRate = fr;
         }
 
-        // Read video rotation
         int videoRotation = 0;
         if (videoFormat.containsKey(MediaFormat.KEY_ROTATION)) {
             videoRotation = videoFormat.getInteger(MediaFormat.KEY_ROTATION);
@@ -169,9 +167,8 @@ public class VideoProcessorMediaCodec {
             } catch (Exception ignored) {}
         }
 
-        Log.d(TAG, "Raw: " + rawWidth + "x" + rawHeight + ", rot=" + videoRotation + ", fps=" + frameRate + ", dur=" + durationUs);
-
-        int inputWidth, inputHeight;
+        int inputWidth;
+        int inputHeight;
         if (videoRotation == 90 || videoRotation == 270) {
             inputWidth = rawHeight;
             inputHeight = rawWidth;
@@ -180,20 +177,13 @@ public class VideoProcessorMediaCodec {
             inputHeight = rawHeight;
         }
 
-        callback.onProgress(5, inputWidth + "×" + inputHeight);
+        callback.onProgress(1, inputWidth + "×" + inputHeight);
 
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 2: Output dimensions with PROPER Resolution & Aspect Ratio
-        // ════════════════════════════════════════════════════════════════════
         int outputWidth = inputWidth;
         int outputHeight = inputHeight;
 
         if (resolution == null) resolution = "original";
         if (aspectRatio == null) aspectRatio = "original";
-
-        Log.d(TAG, "═══════════════════════════════════════════════════════════");
-        Log.d(TAG, "Input: " + inputWidth + "x" + inputHeight);
-        Log.d(TAG, "Requested: resolution='" + resolution + "' aspectRatio='" + aspectRatio + "'");
 
         float inputRatio = (float) inputWidth / inputHeight;
         float targetRatio = inputRatio;
@@ -208,10 +198,10 @@ public class VideoProcessorMediaCodec {
                 case "3:4": targetRatio = 3f / 4f; break;
                 default: targetRatio = inputRatio; break;
             }
-            Log.d(TAG, "Target ratio: " + aspectRatio + " = " + targetRatio);
         }
 
-        int croppedWidth, croppedHeight;
+        int croppedWidth;
+        int croppedHeight;
         if (Math.abs(inputRatio - targetRatio) < 0.01f) {
             croppedWidth = inputWidth;
             croppedHeight = inputHeight;
@@ -237,9 +227,7 @@ public class VideoProcessorMediaCodec {
                     outputWidth = Math.round(outputWidth * scale);
                     outputHeight = targetHeight;
                 }
-            } catch (Exception e) {
-                Log.w(TAG, "Invalid resolution value: " + resolution);
-            }
+            } catch (Exception ignored) {}
         }
 
         outputWidth = Math.max(128, (outputWidth / 2) * 2);
@@ -261,8 +249,6 @@ public class VideoProcessorMediaCodec {
         final float CROP_SCALE_X = cropScaleX;
         final float CROP_SCALE_Y = cropScaleY;
 
-        Log.d(TAG, "FINAL Output: " + FINAL_WIDTH + "x" + FINAL_HEIGHT);
-
         long trimStartUs = (ts.trimEnabled && ts.trim > 0) ? (long) (ts.trim * 1_000_000L) : 0L;
         float speedFactor = (ts.speedEnabled && ts.speed > 0.1f) ? ts.speed : 1.0f;
         float volumeFactor = ts.volumeEnabled ? Math.max(0f, Math.min(3f, ts.volume)) : 1.0f;
@@ -270,11 +256,23 @@ public class VideoProcessorMediaCodec {
         long effectiveDurationUs = (long) ((durationUs - trimStartUs) / speedFactor);
         float effectiveDurationSec = effectiveDurationUs / 1_000_000.0f;
 
-        String outputPath = createOutputPath();
+        // === PROGRESS CALCULATION ===
+        boolean hasAudio = (audioTrackIndex >= 0 && audioFormat != null);
+        boolean needsAudioProcessing = hasAudio && needsAudioProcessing(ts, false);
 
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 3: Video Encoder
-        // ════════════════════════════════════════════════════════════════════
+        // Weight: video = 75%, audio = 20%, init+finalize = 5%
+        // If no audio processing: video = 90%, init+finalize = 10%
+        final float VIDEO_WEIGHT = needsAudioProcessing ? 0.75f : 0.90f;
+        final float AUDIO_WEIGHT = needsAudioProcessing ? 0.20f : 0.0f;
+        final float INIT_WEIGHT = 0.03f;
+        final float FINALIZE_WEIGHT = needsAudioProcessing ? 0.02f : 0.07f;
+        // Total = INIT + VIDEO + AUDIO + FINALIZE = 1.0
+
+        callback.onProgress(1, "প্রিপারেশন...");
+
+        String outputPath = createOutputPath();
+        String tempVideoPath = outputPath.replace(".mp4", "_video_only.mp4");
+
         int baseBitrate = Math.max(4_000_000, FINAL_WIDTH * FINAL_HEIGHT * 5);
         int bitrate = baseBitrate;
         if (ts.bitrateRandomEnabled && ts.bitrateVariation > 0) {
@@ -292,14 +290,19 @@ public class VideoProcessorMediaCodec {
             encoderFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR);
         } catch (Exception ignored) {}
 
+        try {
+            encoderFormat.setInteger(MediaFormat.KEY_PRIORITY, 0);
+        } catch (Exception ignored) {}
+
+        try {
+            encoderFormat.setInteger("operating-rate", frameRate * 6);
+        } catch (Exception ignored) {}
+
         MediaCodec encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
         encoder.configure(encoderFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         Surface encoderSurface = encoder.createInputSurface();
         encoder.start();
 
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 4: EGL Setup
-        // ════════════════════════════════════════════════════════════════════
         EGLDisplay eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY);
         int[] version = new int[2];
         EGL14.eglInitialize(eglDisplay, version, 0, version, 1);
@@ -334,9 +337,6 @@ public class VideoProcessorMediaCodec {
 
         EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext);
 
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 5: GL Resources
-        // ════════════════════════════════════════════════════════════════════
         int[] texArr = new int[1];
         GLES20.glGenTextures(1, texArr, 0);
         int textureId = texArr[0];
@@ -346,9 +346,6 @@ public class VideoProcessorMediaCodec {
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
 
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 6: REACTION FACE VIDEO SETUP (NORMAL SPEED)
-        // ════════════════════════════════════════════════════════════════════
         boolean hasFaceVideo = ts.hasReactionFace();
         int faceTextureId = -1;
         SurfaceTexture faceSurfaceTexture = null;
@@ -363,14 +360,11 @@ public class VideoProcessorMediaCodec {
         final Object faceSyncObject = new Object();
         final boolean[] faceFrameAvailable = {false};
         boolean faceInputDone = false;
-        boolean faceOutputDone = false;
-
-        int faceRawWidth = 0, faceRawHeight = 0;
         Uri faceUri = null;
 
         if (hasFaceVideo) {
             try {
-                callback.onProgress(8, "Reaction Face লোড হচ্ছে...");
+                callback.onProgress(2, "Reaction Face লোড হচ্ছে...");
 
                 faceUri = Uri.parse(ts.reactionFaceUri);
                 faceExtractor = new MediaExtractor();
@@ -391,9 +385,9 @@ public class VideoProcessorMediaCodec {
                 }
 
                 if (faceVideoTrackIndex >= 0 && faceVideoFormat != null) {
-                    faceRawWidth = faceVideoFormat.getInteger(MediaFormat.KEY_WIDTH);
-                    faceRawHeight = faceVideoFormat.getInteger(MediaFormat.KEY_HEIGHT);
                     String faceMime = faceVideoFormat.getString(MediaFormat.KEY_MIME);
+                    int faceRawWidth = faceVideoFormat.getInteger(MediaFormat.KEY_WIDTH);
+                    int faceRawHeight = faceVideoFormat.getInteger(MediaFormat.KEY_HEIGHT);
 
                     int[] faceTexArr = new int[1];
                     GLES20.glGenTextures(1, faceTexArr, 0);
@@ -422,16 +416,8 @@ public class VideoProcessorMediaCodec {
                     if (trimStartUs > 0) {
                         faceExtractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
                     }
-
-                    Log.d(TAG, "Face video setup: " + faceRawWidth + "x" + faceRawHeight);
-                    if (faceAudioTrackIndex >= 0) {
-                        Log.d(TAG, "Face audio track found: " + faceAudioTrackIndex);
-                    } else {
-                        Log.d(TAG, "Face video has NO audio track");
-                    }
                 } else {
                     hasFaceVideo = false;
-                    Log.w(TAG, "Face video track not found");
                 }
 
             } catch (Exception e) {
@@ -448,20 +434,19 @@ public class VideoProcessorMediaCodec {
         final Uri FACE_URI = faceUri;
         final int FACE_AUDIO_TRACK_INDEX = faceAudioTrackIndex;
         final MediaFormat FACE_AUDIO_FORMAT = faceAudioFormat;
-
-        // ★★★ FIX: Properly check if face has audio ★★★
         final boolean FACE_HAS_AUDIO = (faceAudioTrackIndex >= 0 && faceAudioFormat != null);
 
-        // ★★★ FIXED: Face position calculation using PIXEL coordinates ★★★
+        // Re-check audio processing need with face audio info
+        final boolean NEEDS_AUDIO_PROCESSING = hasAudio && needsAudioProcessing(ts, FACE_HAS_AUDIO);
+
         final float faceSize = ts.reactionFaceSize / 100f;
         final float faceCornerRadius = ts.reactionFaceCornerRadius / 100f;
 
-        // Calculate pixel-based position
         int facePadding = 20;
         int faceSizePixels = (int) (FINAL_WIDTH * faceSize);
 
-        // ★ Position in SCREEN coordinates (Y=0 at TOP, like UI)
-        int facePixelX = 0, facePixelY = 0;
+        int facePixelX;
+        int facePixelY;
         switch (ts.reactionFacePosition) {
             case TransformSettings.FACE_POS_TOP_LEFT:
                 facePixelX = facePadding;
@@ -482,16 +467,12 @@ public class VideoProcessorMediaCodec {
                 break;
         }
 
-        // Normalized for shader (0-1 range, screen space with Y=0 at top)
         final float FACE_RECT_X = (float) facePixelX / FINAL_WIDTH;
         final float FACE_RECT_Y = (float) facePixelY / FINAL_HEIGHT;
         final float FACE_RECT_W = faceSize;
         final float FACE_RECT_H = (float) faceSizePixels / FINAL_HEIGHT;
         final float FACE_CORNER_RADIUS = faceCornerRadius;
 
-        Log.d(TAG, "★ Face rect: x=" + FACE_RECT_X + " y=" + FACE_RECT_Y + " w=" + FACE_RECT_W + " h=" + FACE_RECT_H);
-
-        // Create shader
         int program = createShaderProgram(ts, FINAL_WIDTH, FINAL_HEIGHT,
                 CROP_OFFSET_X, CROP_OFFSET_Y, CROP_SCALE_X, CROP_SCALE_Y,
                 useFaceVideo, FACE_RECT_X, FACE_RECT_Y, FACE_RECT_W, FACE_RECT_H, FACE_CORNER_RADIUS);
@@ -517,7 +498,6 @@ public class VideoProcessorMediaCodec {
         int faceRectHandle = GLES20.glGetUniformLocation(program, "uFaceRect");
         int faceCornerRadiusHandle = GLES20.glGetUniformLocation(program, "uFaceCornerRadius");
 
-        // Logo removal
         Rect removalRect = ts.getRemovalRect();
         if (ts.isLogoRemovalEnabled() && removalRect != null) {
             GLES20.glUniform1i(logoRemovalHandle, 1);
@@ -534,7 +514,6 @@ public class VideoProcessorMediaCodec {
         GLES20.glUniform1i(flipEnabledHandle, ts.flipEnabled ? 1 : 0);
         GLES20.glUniform1f(totalDurationHandle, effectiveDurationSec);
 
-        // Watermark
         int[] watermarkTexIdHolder = new int[]{0};
         boolean hasWatermark = false;
         final boolean isDynamicWatermark = (wm != null && wm.dynamicPosition);
@@ -543,7 +522,7 @@ public class VideoProcessorMediaCodec {
         if (wm != null) {
             wm.syncLogo();
             if (wm.isActive()) {
-                Bitmap wmBitmap = createWatermarkBitmap(wm, FINAL_WIDTH, FINAL_HEIGHT, 0);
+                Bitmap wmBitmap = createWatermarkBitmapOptimized(wm, FINAL_WIDTH, FINAL_HEIGHT, 0);
                 if (wmBitmap != null) {
                     watermarkTexIdHolder[0] = createBitmapTexture(wmBitmap);
                     wmBitmap.recycle();
@@ -559,7 +538,6 @@ public class VideoProcessorMediaCodec {
         }
         final boolean useWatermark = hasWatermark;
 
-        // Vertex buffer
         float[] vertices = {
                 -1f, -1f, 0, 0f, 0f,
                 1f, -1f, 0, 1f, 0f,
@@ -580,9 +558,6 @@ public class VideoProcessorMediaCodec {
         float[] faceStMatrix = new float[16];
         Matrix.setIdentityM(faceStMatrix, 0);
 
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 7: SurfaceTexture + Decoder
-        // ════════════════════════════════════════════════════════════════════
         SurfaceTexture outputSurfaceTexture = new SurfaceTexture(textureId);
         outputSurfaceTexture.setDefaultBufferSize(rawWidth, rawHeight);
         outputSurfaceTexture.setOnFrameAvailableListener(st -> {
@@ -597,21 +572,16 @@ public class VideoProcessorMediaCodec {
         decoder.configure(videoFormat, decoderSurface, null, 0);
         decoder.start();
 
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 8: In-memory video chunk collection
-        // ════════════════════════════════════════════════════════════════════
-        ArrayList<byte[]> videoChunks = new ArrayList<>();
-        ArrayList<MediaCodec.BufferInfo> videoChunkInfos = new ArrayList<>();
+        MediaMuxer videoOnlyMuxer = new MediaMuxer(tempVideoPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+        int muxVideoTrack = -1;
+        boolean muxStarted = false;
         MediaFormat encodedVideoFormat = null;
 
         extractor.selectTrack(videoTrackIndex);
         if (trimStartUs > 0) extractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
 
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 9: Main encode loop
-        // ════════════════════════════════════════════════════════════════════
-        final int VP_START = 10, VP_END = 75;
-        callback.onProgress(VP_START, "প্রসেসিং শুরু...");
+        // Init done - report 3%
+        callback.onProgress(3, "প্রসেসিং শুরু...");
 
         MediaCodec.BufferInfo decoderInfo = new MediaCodec.BufferInfo();
         MediaCodec.BufferInfo encoderInfo = new MediaCodec.BufferInfo();
@@ -620,10 +590,6 @@ public class VideoProcessorMediaCodec {
         boolean outputDone = false;
         boolean encoderDone = false;
         int frameCount = 0;
-        int skippedFrames = 0;
-        int duplicatedFrames = 0;
-
-        int totalEstimatedFrames = Math.max(1, (int) (effectiveDurationUs * frameRate / 1_000_000.0));
         long frameIntervalUs = 1_000_000L / frameRate;
         long lastPts = -1L;
         long videoFirstPts = -1L;
@@ -633,9 +599,12 @@ public class VideoProcessorMediaCodec {
         long duplicatePts = 0;
         float[] duplicateStMatrix = new float[16];
 
+        final long[] faceFirstPtsHolder = {-1L};
+        final boolean[] faceOutputDoneHolder = {false};
+        long currentFacePts = -1L;
+
         while (!encoderDone && !isCancelled) {
 
-            // Main decoder input
             if (!inputDone) {
                 int inIdx = decoder.dequeueInputBuffer(TIMEOUT_US);
                 if (inIdx >= 0) {
@@ -654,67 +623,39 @@ public class VideoProcessorMediaCodec {
                 }
             }
 
-            // ★★★ Face decoder input - NORMAL SPEED (NO speed adjustment) ★★★
             if (useFaceVideo && !faceInputDone && FACE_DECODER != null && FACE_EXTRACTOR != null) {
-                int faceInIdx = FACE_DECODER.dequeueInputBuffer(0);
-                if (faceInIdx >= 0) {
-                    ByteBuffer faceInBuf = FACE_DECODER.getInputBuffer(faceInIdx);
-                    if (faceInBuf != null) {
-                        faceInBuf.clear();
-                        int sz = FACE_EXTRACTOR.readSampleData(faceInBuf, 0);
-                        if (sz < 0) {
-                            FACE_DECODER.queueInputBuffer(faceInIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                            faceInputDone = true;
-                        } else {
-                            // ★★★ Use actual timestamp (normal speed) ★★★
-                            long faceRawPts = FACE_EXTRACTOR.getSampleTime();
-                            FACE_DECODER.queueInputBuffer(faceInIdx, 0, sz, faceRawPts, 0);
-                            FACE_EXTRACTOR.advance();
+                for (int i = 0; i < 2 && !faceInputDone; i++) {
+                    int faceInIdx = FACE_DECODER.dequeueInputBuffer(0);
+                    if (faceInIdx >= 0) {
+                        ByteBuffer faceInBuf = FACE_DECODER.getInputBuffer(faceInIdx);
+                        if (faceInBuf != null) {
+                            faceInBuf.clear();
+                            int sz = FACE_EXTRACTOR.readSampleData(faceInBuf, 0);
+                            if (sz < 0) {
+                                FACE_DECODER.queueInputBuffer(faceInIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                                faceInputDone = true;
+                            } else {
+                                FACE_DECODER.queueInputBuffer(faceInIdx, 0, sz, FACE_EXTRACTOR.getSampleTime(), 0);
+                                FACE_EXTRACTOR.advance();
+                            }
                         }
                     }
                 }
             }
 
-            // Face decoder output
-            if (useFaceVideo && !faceOutputDone && FACE_DECODER != null) {
-                MediaCodec.BufferInfo faceDecInfo = new MediaCodec.BufferInfo();
-                int faceOutIdx = FACE_DECODER.dequeueOutputBuffer(faceDecInfo, 0);
-                if (faceOutIdx >= 0) {
-                    boolean doRender = (faceDecInfo.size != 0);
-                    FACE_DECODER.releaseOutputBuffer(faceOutIdx, doRender);
-
-                    if (doRender && FACE_SURFACE_TEXTURE != null) {
-                        boolean gotFace = awaitNewFrame(faceSyncObject, faceFrameAvailable);
-                        if (gotFace) {
-                            FACE_SURFACE_TEXTURE.updateTexImage();
-                            FACE_SURFACE_TEXTURE.getTransformMatrix(faceStMatrix);
-                        }
-                    }
-
-                    if ((faceDecInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                        faceOutputDone = true;
-                        Log.d(TAG, "Face video ended");
-                    }
-                }
-            }
-
-            // Handle pending duplication
             if (pendingDuplicate && !outputDone) {
                 renderFrame(eglDisplay, eglSurface, eglContext, program, textureId, watermarkTexIdHolder[0],
                         FACE_TEX_ID, FINAL_WIDTH, FINAL_HEIGHT, mvpMatrix, duplicateStMatrix, faceStMatrix,
                         vertexBuffer, positionHandle, textureCoordHandle, mvpMatrixHandle, stMatrixHandle,
                         textureHandle, watermarkHandle, hasWatermarkHandle, faceTextureHandle,
                         hasFaceVideoHandle, faceRectHandle, faceCornerRadiusHandle, currentTimeHandle,
-                        duplicatePts, useWatermark, useFaceVideo && !faceOutputDone,
+                        duplicatePts, useWatermark, useFaceVideo && !faceOutputDoneHolder[0],
                         FACE_RECT_X, FACE_RECT_Y, FACE_RECT_W, FACE_RECT_H, FACE_CORNER_RADIUS);
-
                 lastPts = duplicatePts;
                 frameCount++;
-                duplicatedFrames++;
                 pendingDuplicate = false;
             }
 
-            // Main decoder output
             if (!outputDone) {
                 int outIdx = decoder.dequeueOutputBuffer(decoderInfo, TIMEOUT_US);
                 if (outIdx >= 0) {
@@ -724,15 +665,27 @@ public class VideoProcessorMediaCodec {
                     if (doRender) {
                         boolean got = awaitNewFrame(frameSyncObject, frameAvailable);
                         if (got) {
-                            EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext);
                             outputSurfaceTexture.updateTexImage();
                             outputSurfaceTexture.getTransformMatrix(stMatrix);
 
                             long rawPts = decoderInfo.presentationTimeUs;
                             if (videoFirstPts < 0) videoFirstPts = rawPts;
                             long outputPts = (long) ((rawPts - videoFirstPts) / speedFactor);
-                            if (lastPts >= 0 && outputPts <= lastPts)
-                                outputPts = lastPts + frameIntervalUs;
+                            if (lastPts >= 0 && outputPts <= lastPts) outputPts = lastPts + frameIntervalUs;
+
+                            if (useFaceVideo && FACE_DECODER != null && FACE_SURFACE_TEXTURE != null && !faceOutputDoneHolder[0]) {
+                                currentFacePts = advanceFaceVideoToTime(
+                                        FACE_DECODER,
+                                        FACE_SURFACE_TEXTURE,
+                                        faceSyncObject,
+                                        faceFrameAvailable,
+                                        faceStMatrix,
+                                        outputPts,
+                                        currentFacePts,
+                                        faceFirstPtsHolder,
+                                        faceOutputDoneHolder
+                                );
+                            }
 
                             boolean shouldRenderFrame = true;
                             boolean shouldDuplicate = false;
@@ -742,7 +695,6 @@ public class VideoProcessorMediaCodec {
                                 if (rand < ts.jitterIntensity) {
                                     if (random.nextBoolean()) {
                                         shouldRenderFrame = false;
-                                        skippedFrames++;
                                     } else {
                                         shouldDuplicate = true;
                                     }
@@ -753,7 +705,7 @@ public class VideoProcessorMediaCodec {
                                 if (isDynamicWatermark && wm != null && wm.isActive()) {
                                     long intervalUs = wm.positionChangeIntervalSec * 1_000_000L;
                                     if ((outputPts - lastWatermarkUpdateUs) >= intervalUs) {
-                                        Bitmap newWmBitmap = createWatermarkBitmap(wm, FINAL_WIDTH, FINAL_HEIGHT, outputPts);
+                                        Bitmap newWmBitmap = createWatermarkBitmapOptimized(wm, FINAL_WIDTH, FINAL_HEIGHT, outputPts);
                                         if (newWmBitmap != null) {
                                             GLES20.glDeleteTextures(1, watermarkTexIdHolder, 0);
                                             watermarkTexIdHolder[0] = createBitmapTexture(newWmBitmap);
@@ -768,7 +720,7 @@ public class VideoProcessorMediaCodec {
                                         vertexBuffer, positionHandle, textureCoordHandle, mvpMatrixHandle, stMatrixHandle,
                                         textureHandle, watermarkHandle, hasWatermarkHandle, faceTextureHandle,
                                         hasFaceVideoHandle, faceRectHandle, faceCornerRadiusHandle, currentTimeHandle,
-                                        outputPts, useWatermark, useFaceVideo && !faceOutputDone,
+                                        outputPts, useWatermark, useFaceVideo && !faceOutputDoneHolder[0],
                                         FACE_RECT_X, FACE_RECT_Y, FACE_RECT_W, FACE_RECT_H, FACE_CORNER_RADIUS);
 
                                 lastPts = outputPts;
@@ -780,9 +732,18 @@ public class VideoProcessorMediaCodec {
                                     System.arraycopy(stMatrix, 0, duplicateStMatrix, 0, 16);
                                 }
 
-                                if (System.currentTimeMillis() - lastProgressUpdate > 250) {
-                                    int pct = VP_START + (int) ((VP_END - VP_START) * (double) frameCount / totalEstimatedFrames);
-                                    callback.onProgress(Math.min(VP_END, Math.max(VP_START, pct)), "ফ্রেম: " + frameCount);
+                                // === SYNCED VIDEO PROGRESS ===
+                                if (System.currentTimeMillis() - lastProgressUpdate > 400) {
+                                    double videoRatio = 0.0;
+                                    if (effectiveDurationUs > 0 && outputPts > 0) {
+                                        videoRatio = (double) outputPts / effectiveDurationUs;
+                                    }
+                                    videoRatio = Math.max(0.0, Math.min(1.0, videoRatio));
+
+                                    // INIT_WEIGHT(3%) already sent, now video portion
+                                    int pct = (int) (INIT_WEIGHT * 100 + VIDEO_WEIGHT * 100 * videoRatio);
+                                    pct = Math.max(3, Math.min(pct, (int) ((INIT_WEIGHT + VIDEO_WEIGHT) * 100)));
+                                    callback.onProgress(pct, "ফ্রেম: " + frameCount);
                                     lastProgressUpdate = System.currentTimeMillis();
                                 }
                             }
@@ -796,25 +757,22 @@ public class VideoProcessorMediaCodec {
                 }
             }
 
-            // Encoder output
             while (true) {
-                int encIdx = encoder.dequeueOutputBuffer(encoderInfo, TIMEOUT_US);
+                int encIdx = encoder.dequeueOutputBuffer(encoderInfo, 0);
                 if (encIdx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     if (encodedVideoFormat == null) {
                         encodedVideoFormat = encoder.getOutputFormat();
+                        muxVideoTrack = videoOnlyMuxer.addTrack(encodedVideoFormat);
+                        videoOnlyMuxer.start();
+                        muxStarted = true;
                     }
                 } else if (encIdx >= 0) {
                     ByteBuffer encData = encoder.getOutputBuffer(encIdx);
                     if (encData != null && encodedVideoFormat != null && encoderInfo.size > 0
-                            && (encoderInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
+                            && (encoderInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0 && muxStarted) {
                         encData.position(encoderInfo.offset);
                         encData.limit(encoderInfo.offset + encoderInfo.size);
-                        byte[] chunk = new byte[encoderInfo.size];
-                        encData.get(chunk);
-                        MediaCodec.BufferInfo si = new MediaCodec.BufferInfo();
-                        si.set(0, chunk.length, encoderInfo.presentationTimeUs, encoderInfo.flags);
-                        videoChunks.add(chunk);
-                        videoChunkInfos.add(si);
+                        videoOnlyMuxer.writeSampleData(muxVideoTrack, encData, encoderInfo);
                     }
                     encoder.releaseOutputBuffer(encIdx, false);
                     if ((encoderInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
@@ -827,16 +785,14 @@ public class VideoProcessorMediaCodec {
             }
         }
 
-        Log.d(TAG, "Video loop done. Frames=" + frameCount + " chunks=" + videoChunks.size());
-
-        // Cleanup video resources
-        try { decoder.stop(); decoder.release(); } catch (Exception ignored) {}
-        try { encoder.stop(); encoder.release(); } catch (Exception ignored) {}
+        try { decoder.stop(); } catch (Exception ignored) {}
+        try { decoder.release(); } catch (Exception ignored) {}
+        try { encoder.stop(); } catch (Exception ignored) {}
+        try { encoder.release(); } catch (Exception ignored) {}
         try { extractor.release(); } catch (Exception ignored) {}
         try { decoderSurface.release(); } catch (Exception ignored) {}
         try { outputSurfaceTexture.release(); } catch (Exception ignored) {}
 
-        // Cleanup face video resources
         if (useFaceVideo) {
             try { if (FACE_DECODER != null) { FACE_DECODER.stop(); FACE_DECODER.release(); } } catch (Exception ignored) {}
             try { if (FACE_EXTRACTOR != null) FACE_EXTRACTOR.release(); } catch (Exception ignored) {}
@@ -844,6 +800,11 @@ public class VideoProcessorMediaCodec {
             try { if (FACE_SURFACE_TEXTURE != null) FACE_SURFACE_TEXTURE.release(); } catch (Exception ignored) {}
             if (FACE_TEX_ID != -1) GLES20.glDeleteTextures(1, new int[]{FACE_TEX_ID}, 0);
         }
+
+        try {
+            if (muxStarted) videoOnlyMuxer.stop();
+        } catch (Exception ignored) {}
+        try { videoOnlyMuxer.release(); } catch (Exception ignored) {}
 
         GLES20.glDeleteTextures(1, new int[]{textureId}, 0);
         GLES20.glDeleteTextures(1, watermarkTexIdHolder, 0);
@@ -855,33 +816,44 @@ public class VideoProcessorMediaCodec {
         EGL14.eglTerminate(eglDisplay);
         try { encoderSurface.release(); } catch (Exception ignored) {}
 
+        System.gc();
+
         if (isCancelled) {
-            Log.d(TAG, "Cancelled");
+            try { new File(tempVideoPath).delete(); } catch (Exception ignored) {}
             return;
         }
 
-        if (videoChunks.isEmpty() || encodedVideoFormat == null) {
-            callback.onError("ভিডিও এনকোড ব্যর্থ (কোনো ফ্রেম নেই)");
+        File tempVideoFile = new File(tempVideoPath);
+        if (!tempVideoFile.exists() || tempVideoFile.length() < 1000) {
+            callback.onError("ভিডিও এনকোড ব্যর্থ");
             return;
         }
 
-        callback.onProgress(75, "ভিডিও সম্পন্ন...");
+        // Video done progress
+        int videoDonePct = (int) ((INIT_WEIGHT + VIDEO_WEIGHT) * 100);
+        callback.onProgress(videoDonePct, "ভিডিও সম্পন্ন...");
 
-        // ════════════════════════════════════════════════════════════════════
-        // AUDIO PROCESSING WITH FACE AUDIO MIXING
-        // ════════════════════════════════════════════════════════════════════
         if (audioTrackIndex >= 0 && audioFormat != null) {
-            processAudioWithFaceMix(context, inputUri, outputPath, audioTrackIndex, audioFormat,
+            processAudioStable(
+                    context, inputUri, tempVideoPath, outputPath,
+                    audioTrackIndex, audioFormat,
                     trimStartUs, speedFactor, volumeFactor, effectiveDurationUs, callback, ts,
-                    videoChunks, videoChunkInfos, encodedVideoFormat,
-                    FACE_HAS_AUDIO, FACE_URI, FACE_AUDIO_TRACK_INDEX, FACE_AUDIO_FORMAT);
+                    FACE_HAS_AUDIO, FACE_URI, FACE_AUDIO_TRACK_INDEX, FACE_AUDIO_FORMAT,
+                    INIT_WEIGHT, VIDEO_WEIGHT, AUDIO_WEIGHT, FINALIZE_WEIGHT
+            );
         } else {
-            callback.onProgress(80, "ভিডিও মিক্স হচ্ছে...");
-            muxVideoOnly(encodedVideoFormat, videoChunks, videoChunkInfos, outputPath);
+            boolean renamed = tempVideoFile.renameTo(new File(outputPath));
+            if (!renamed) {
+                muxTempVideoOnly(tempVideoPath, outputPath);
+                try { tempVideoFile.delete(); } catch (Exception ignored) {}
+            }
         }
+
+        try { new File(tempVideoPath).delete(); } catch (Exception ignored) {}
 
         if (isCancelled) return;
-        callback.onProgress(90, "ফাইনালাইজ হচ্ছে...");
+
+        callback.onProgress(95, "ফাইনালাইজ হচ্ছে...");
 
         File finalFile = new File(outputPath);
         if (!finalFile.exists() || finalFile.length() < 1000) {
@@ -889,15 +861,576 @@ public class VideoProcessorMediaCodec {
             return;
         }
 
-        callback.onProgress(98, "সম্পন্ন হচ্ছে...");
-        Log.d(TAG, "Complete! frames=" + frameCount + " size=" + finalFile.length());
         callback.onProgress(100, "✓ সম্পন্ন!");
+
+        // Wait so UI can show 100%
+        try { Thread.sleep(600); } catch (InterruptedException ignored) {}
+
         callback.onComplete(outputPath);
     }
 
-    // ════════════════════════════════════════════════════════════════════════════
-    // RENDER FRAME HELPER
-    // ════════════════════════════════════════════════════════════════════════════
+    private boolean needsAudioProcessing(TransformSettings ts, boolean faceAudioMixNeeded) {
+        return ts.speedEnabled ||
+                ts.volumeEnabled ||
+                ts.pitchEnabled ||
+                ts.spectralNoiseEnabled ||
+                ts.ambientNoiseEnabled ||
+                ts.trimEnabled ||
+                faceAudioMixNeeded;
+    }
+
+    private void processAudioStable(Context context, Uri inputUri, String tempVideoPath, String finalOutputPath,
+                                    int audioTrackIndex, MediaFormat audioFormat,
+                                    long trimStartUs, float speedFactor, float volumeFactor,
+                                    long maxDurationUs, ProgressCallback callback, TransformSettings ts,
+                                    boolean hasFaceAudio, Uri faceUri,
+                                    int faceAudioTrackIndex, MediaFormat faceAudioFormat,
+                                    float initWeight, float videoWeight, float audioWeight, float finalizeWeight) {
+
+        boolean useFaceAudio = hasFaceAudio && faceUri != null && faceAudioTrackIndex >= 0 && faceAudioFormat != null;
+
+        if (shouldPassthroughAudio(ts, useFaceAudio)) {
+            int audioStartPct = (int) ((initWeight + videoWeight) * 100);
+            callback.onProgress(audioStartPct, "অডিও কপি হচ্ছে...");
+            muxVideoWithOriginalAudio(tempVideoPath, context, inputUri, finalOutputPath, audioTrackIndex, trimStartUs, maxDurationUs);
+            int audioDonePct = (int) ((initWeight + videoWeight + audioWeight) * 100);
+            callback.onProgress(audioDonePct, "অডিও সম্পন্ন");
+            return;
+        }
+
+        MediaExtractor audioExtractor = null;
+        MediaCodec audioDecoder = null;
+        MediaExtractor faceAudioExtractor = null;
+        MediaCodec faceAudioDecoder = null;
+        MediaCodec audioEncoder = null;
+        MediaMuxer finalMuxer = null;
+        MediaExtractor tempVideoExtractor = null;
+
+        try {
+            int audioStartPct = (int) ((initWeight + videoWeight) * 100);
+            callback.onProgress(audioStartPct, "অডিও প্রসেসিং...");
+
+            audioExtractor = new MediaExtractor();
+            audioExtractor.setDataSource(context, inputUri, null);
+            audioExtractor.selectTrack(audioTrackIndex);
+            if (trimStartUs > 0) audioExtractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+
+            String audioMime = audioFormat.getString(MediaFormat.KEY_MIME);
+            int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+            int channelCount = audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
+
+            float mainVolume = useFaceAudio ? volumeFactor * 0.70f : volumeFactor;
+            float faceVolume = useFaceAudio ? 1.0f : 0.0f;
+
+            if (useFaceAudio) {
+                try {
+                    faceAudioExtractor = new MediaExtractor();
+                    faceAudioExtractor.setDataSource(context, faceUri, null);
+                    faceAudioExtractor.selectTrack(faceAudioTrackIndex);
+                    if (trimStartUs > 0) faceAudioExtractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+
+                    String faceMime = faceAudioFormat.getString(MediaFormat.KEY_MIME);
+                    faceAudioDecoder = MediaCodec.createDecoderByType(faceMime);
+                    faceAudioDecoder.configure(faceAudioFormat, null, null, 0);
+                    faceAudioDecoder.start();
+                } catch (Exception e) {
+                    Log.e(TAG, "Face audio setup failed", e);
+                    useFaceAudio = false;
+                    faceVolume = 0f;
+                    mainVolume = volumeFactor;
+                }
+            }
+
+            audioDecoder = MediaCodec.createDecoderByType(audioMime);
+            audioDecoder.configure(audioFormat, null, null, 0);
+            audioDecoder.start();
+
+            MediaFormat encFmt = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, channelCount);
+            encFmt.setInteger(MediaFormat.KEY_BIT_RATE, 128000);
+            encFmt.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
+            encFmt.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 16384);
+
+            audioEncoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
+            audioEncoder.configure(encFmt, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+            audioEncoder.start();
+
+            tempVideoExtractor = new MediaExtractor();
+            tempVideoExtractor.setDataSource(tempVideoPath);
+
+            int tempVideoTrackIndex = -1;
+            MediaFormat tempVideoFormat = null;
+            for (int i = 0; i < tempVideoExtractor.getTrackCount(); i++) {
+                MediaFormat f = tempVideoExtractor.getTrackFormat(i);
+                String mime = f.getString(MediaFormat.KEY_MIME);
+                if (mime != null && mime.startsWith("video/")) {
+                    tempVideoTrackIndex = i;
+                    tempVideoFormat = f;
+                    break;
+                }
+            }
+            if (tempVideoTrackIndex < 0 || tempVideoFormat == null) {
+                throw new RuntimeException("Temp video track missing");
+            }
+
+            finalMuxer = new MediaMuxer(finalOutputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+            int muxVideoTrack = finalMuxer.addTrack(tempVideoFormat);
+
+            MediaCodec.BufferInfo encInfo = new MediaCodec.BufferInfo();
+            MediaFormat outAudioFormat = null;
+
+            while (outAudioFormat == null && !isCancelled) {
+                int status = audioEncoder.dequeueOutputBuffer(encInfo, TIMEOUT_US);
+                if (status == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    outAudioFormat = audioEncoder.getOutputFormat();
+                } else if (status >= 0) {
+                    audioEncoder.releaseOutputBuffer(status, false);
+                } else {
+                    break;
+                }
+            }
+
+            if (outAudioFormat == null) {
+                outAudioFormat = encFmt;
+            }
+
+            int muxAudioTrack = finalMuxer.addTrack(outAudioFormat);
+            finalMuxer.start();
+
+            tempVideoExtractor.selectTrack(tempVideoTrackIndex);
+            ByteBuffer vBuf = ByteBuffer.allocateDirect(1024 * 1024);
+            MediaCodec.BufferInfo vInfo = new MediaCodec.BufferInfo();
+            while (!isCancelled) {
+                vBuf.clear();
+                int size = tempVideoExtractor.readSampleData(vBuf, 0);
+                if (size < 0) break;
+                vInfo.offset = 0;
+                vInfo.size = size;
+                vInfo.presentationTimeUs = tempVideoExtractor.getSampleTime();
+                vInfo.flags = tempVideoExtractor.getSampleFlags();
+                finalMuxer.writeSampleData(muxVideoTrack, vBuf, vInfo);
+                tempVideoExtractor.advance();
+            }
+
+            MediaCodec.BufferInfo decInfo = new MediaCodec.BufferInfo();
+            MediaCodec.BufferInfo faceDecInfo = new MediaCodec.BufferInfo();
+
+            boolean inputDone = false;
+            boolean decodeDone = false;
+            boolean encodeDone = false;
+            boolean faceInputDone = false;
+            boolean faceDecodeDone = false;
+
+            long firstPts = -1L, lastOutputPts = -1L;
+            int processedSamples = 0;
+            long lastAudioProgress = System.currentTimeMillis();
+
+            short[] pendingFaceSamples = null;
+            int faceBufferReadPos = 0;
+
+            while (!encodeDone && !isCancelled) {
+
+                if (!inputDone) {
+                    int inIdx = audioDecoder.dequeueInputBuffer(TIMEOUT_US);
+                    if (inIdx >= 0) {
+                        ByteBuffer inBuf = audioDecoder.getInputBuffer(inIdx);
+                        if (inBuf != null) {
+                            inBuf.clear();
+                            int sz = audioExtractor.readSampleData(inBuf, 0);
+                            if (sz < 0) {
+                                audioDecoder.queueInputBuffer(inIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                                inputDone = true;
+                            } else {
+                                audioDecoder.queueInputBuffer(inIdx, 0, sz, audioExtractor.getSampleTime(), 0);
+                                audioExtractor.advance();
+                            }
+                        }
+                    }
+                }
+
+                if (useFaceAudio && !faceInputDone && faceAudioDecoder != null && faceAudioExtractor != null) {
+                    int inIdx = faceAudioDecoder.dequeueInputBuffer(0);
+                    if (inIdx >= 0) {
+                        ByteBuffer inBuf = faceAudioDecoder.getInputBuffer(inIdx);
+                        if (inBuf != null) {
+                            inBuf.clear();
+                            int sz = faceAudioExtractor.readSampleData(inBuf, 0);
+                            if (sz < 0) {
+                                faceAudioDecoder.queueInputBuffer(inIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                                faceInputDone = true;
+                            } else {
+                                faceAudioDecoder.queueInputBuffer(inIdx, 0, sz, faceAudioExtractor.getSampleTime(), 0);
+                                faceAudioExtractor.advance();
+                            }
+                        }
+                    }
+                }
+
+                if (useFaceAudio && !faceDecodeDone && faceAudioDecoder != null) {
+                    int outIdx = faceAudioDecoder.dequeueOutputBuffer(faceDecInfo, 0);
+                    if (outIdx >= 0) {
+                        ByteBuffer outBuf = faceAudioDecoder.getOutputBuffer(outIdx);
+                        if (faceDecInfo.size > 0 && outBuf != null) {
+                            outBuf.position(faceDecInfo.offset);
+                            outBuf.limit(faceDecInfo.offset + faceDecInfo.size);
+                            ShortBuffer sb = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+                            short[] newFace = new short[sb.remaining()];
+                            sb.get(newFace);
+
+                            if (pendingFaceSamples == null) {
+                                pendingFaceSamples = newFace;
+                                faceBufferReadPos = 0;
+                            } else {
+                                int remain = pendingFaceSamples.length - faceBufferReadPos;
+                                short[] merged = new short[remain + newFace.length];
+                                System.arraycopy(pendingFaceSamples, faceBufferReadPos, merged, 0, remain);
+                                System.arraycopy(newFace, 0, merged, remain, newFace.length);
+                                pendingFaceSamples = merged;
+                                faceBufferReadPos = 0;
+                            }
+                        }
+                        faceAudioDecoder.releaseOutputBuffer(outIdx, false);
+                        if ((faceDecInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                            faceDecodeDone = true;
+                        }
+                    }
+                }
+
+                if (!decodeDone) {
+                    int outIdx = audioDecoder.dequeueOutputBuffer(decInfo, TIMEOUT_US);
+                    if (outIdx >= 0) {
+                        ByteBuffer outBuf = audioDecoder.getOutputBuffer(outIdx);
+
+                        if (decInfo.size > 0 && outBuf != null) {
+                            outBuf.position(decInfo.offset);
+                            outBuf.limit(decInfo.offset + decInfo.size);
+                            ShortBuffer sb = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+                            short[] samples = new short[sb.remaining()];
+                            sb.get(samples);
+
+                            for (int i = 0; i < samples.length; i++) {
+                                float s = samples[i] * mainVolume;
+                                samples[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) s));
+                            }
+
+                            if (useFaceAudio && pendingFaceSamples != null) {
+                                int available = pendingFaceSamples.length - faceBufferReadPos;
+                                int toMix = Math.min(samples.length, available);
+
+                                for (int i = 0; i < toMix; i++) {
+                                    float mixed = samples[i] + pendingFaceSamples[faceBufferReadPos + i] * faceVolume;
+                                    if (mixed > Short.MAX_VALUE) mixed = Short.MAX_VALUE;
+                                    if (mixed < Short.MIN_VALUE) mixed = Short.MIN_VALUE;
+                                    samples[i] = (short) mixed;
+                                }
+
+                                faceBufferReadPos += toMix;
+                                if (faceBufferReadPos >= pendingFaceSamples.length) {
+                                    pendingFaceSamples = null;
+                                    faceBufferReadPos = 0;
+                                }
+                            }
+
+                            if (ts.pitchEnabled && Math.abs(ts.pitch - 1f) > 0.005f) {
+                                samples = applyPitchToSamples(samples, ts.pitch, channelCount);
+                            }
+                            if (ts.spectralNoiseEnabled && ts.spectralNoise > 0.0001f) {
+                                samples = applySpectralNoise(samples, ts.spectralNoise, sampleRate);
+                            }
+                            if (ts.ambientNoiseEnabled && ts.ambientNoiseLevel > 0.0001f) {
+                                samples = applyAmbientNoise(samples, ts.ambientNoiseLevel);
+                            }
+
+                            long pts = decInfo.presentationTimeUs;
+                            if (firstPts < 0) firstPts = pts;
+                            long outPts = (long) ((pts - firstPts) / speedFactor);
+                            if (outPts < 0) outPts = 0;
+
+                            if (maxDurationUs <= 0 || outPts < maxDurationUs) {
+                                if (lastOutputPts >= 0 && outPts <= lastOutputPts) outPts = lastOutputPts + 1;
+                                lastOutputPts = outPts;
+
+                                int inIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
+                                if (inIdx >= 0) {
+                                    ByteBuffer inBuf = audioEncoder.getInputBuffer(inIdx);
+                                    if (inBuf != null) {
+                                        inBuf.clear();
+                                        ByteBuffer pcm = ByteBuffer.allocate(samples.length * 2).order(ByteOrder.LITTLE_ENDIAN);
+                                        pcm.asShortBuffer().put(samples);
+                                        int writeLen = Math.min(pcm.array().length, inBuf.capacity());
+                                        inBuf.put(pcm.array(), 0, writeLen);
+                                        audioEncoder.queueInputBuffer(inIdx, 0, writeLen, outPts, 0);
+                                        processedSamples++;
+                                    }
+                                }
+                            }
+                        }
+
+                        audioDecoder.releaseOutputBuffer(outIdx, false);
+
+                        if ((decInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                            decodeDone = true;
+                            int eosIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
+                            if (eosIdx >= 0) {
+                                audioEncoder.queueInputBuffer(eosIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                            }
+                        }
+
+                        // === SYNCED AUDIO PROGRESS ===
+                        if (System.currentTimeMillis() - lastAudioProgress > 400) {
+                            double audioRatio = 0.0;
+                            if (maxDurationUs > 0 && lastOutputPts > 0) {
+                                audioRatio = (double) lastOutputPts / maxDurationUs;
+                            }
+                            audioRatio = Math.max(0.0, Math.min(1.0, audioRatio));
+
+                            int audioPct = (int) ((initWeight + videoWeight) * 100 + audioWeight * 100 * audioRatio);
+                            int maxAudioPct = (int) ((initWeight + videoWeight + audioWeight) * 100);
+                            audioPct = Math.max((int) ((initWeight + videoWeight) * 100), Math.min(audioPct, maxAudioPct));
+                            callback.onProgress(audioPct, "অডিও: " + processedSamples);
+                            lastAudioProgress = System.currentTimeMillis();
+                        }
+                    }
+                }
+
+                while (true) {
+                    int encIdx = audioEncoder.dequeueOutputBuffer(encInfo, 0);
+                    if (encIdx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    } else if (encIdx >= 0) {
+                        ByteBuffer buf = audioEncoder.getOutputBuffer(encIdx);
+                        if (buf != null && encInfo.size > 0 &&
+                                (encInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
+                            buf.position(encInfo.offset);
+                            buf.limit(encInfo.offset + encInfo.size);
+                            finalMuxer.writeSampleData(muxAudioTrack, buf, encInfo);
+                        }
+                        audioEncoder.releaseOutputBuffer(encIdx, false);
+                        if ((encInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                            encodeDone = true;
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Audio processing error", e);
+            muxVideoWithOriginalAudio(tempVideoPath, context, inputUri, finalOutputPath, audioTrackIndex, trimStartUs, maxDurationUs);
+            return;
+        } finally {
+            try { if (audioDecoder != null) { audioDecoder.stop(); audioDecoder.release(); } } catch (Exception ignored) {}
+            try { if (audioEncoder != null) { audioEncoder.stop(); audioEncoder.release(); } } catch (Exception ignored) {}
+            try { if (audioExtractor != null) audioExtractor.release(); } catch (Exception ignored) {}
+            try { if (faceAudioDecoder != null) { faceAudioDecoder.stop(); faceAudioDecoder.release(); } } catch (Exception ignored) {}
+            try { if (faceAudioExtractor != null) faceAudioExtractor.release(); } catch (Exception ignored) {}
+            try { if (tempVideoExtractor != null) tempVideoExtractor.release(); } catch (Exception ignored) {}
+            try { if (finalMuxer != null) { finalMuxer.stop(); finalMuxer.release(); } } catch (Exception ignored) {}
+        }
+    }
+
+    private void muxVideoWithOriginalAudio(String tempVideoPath, Context context, Uri inputUri,
+                                           String finalOutputPath, int audioTrackIndex,
+                                           long trimStartUs, long maxDurationUs) {
+        MediaExtractor videoExtractor = null;
+        MediaExtractor audioExtractor = null;
+        MediaMuxer muxer = null;
+
+        try {
+            videoExtractor = new MediaExtractor();
+            videoExtractor.setDataSource(tempVideoPath);
+
+            int vTrackIndex = -1;
+            MediaFormat vFormat = null;
+            for (int i = 0; i < videoExtractor.getTrackCount(); i++) {
+                MediaFormat f = videoExtractor.getTrackFormat(i);
+                String mime = f.getString(MediaFormat.KEY_MIME);
+                if (mime != null && mime.startsWith("video/")) {
+                    vTrackIndex = i;
+                    vFormat = f;
+                    break;
+                }
+            }
+
+            audioExtractor = new MediaExtractor();
+            audioExtractor.setDataSource(context, inputUri, null);
+            audioExtractor.selectTrack(audioTrackIndex);
+            if (trimStartUs > 0) audioExtractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+            MediaFormat aFormat = audioExtractor.getTrackFormat(audioTrackIndex);
+
+            muxer = new MediaMuxer(finalOutputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+            int outVTrack = muxer.addTrack(vFormat);
+            int outATrack = muxer.addTrack(aFormat);
+            muxer.start();
+
+            videoExtractor.selectTrack(vTrackIndex);
+
+            ByteBuffer vBuf = ByteBuffer.allocateDirect(1024 * 1024);
+            MediaCodec.BufferInfo vInfo = new MediaCodec.BufferInfo();
+            while (!isCancelled) {
+                vBuf.clear();
+                int size = videoExtractor.readSampleData(vBuf, 0);
+                if (size < 0) break;
+                vInfo.offset = 0;
+                vInfo.size = size;
+                vInfo.presentationTimeUs = videoExtractor.getSampleTime();
+                vInfo.flags = videoExtractor.getSampleFlags();
+                muxer.writeSampleData(outVTrack, vBuf, vInfo);
+                videoExtractor.advance();
+            }
+
+            ByteBuffer aBuf = ByteBuffer.allocateDirect(256 * 1024);
+            MediaCodec.BufferInfo aInfo = new MediaCodec.BufferInfo();
+            long audioFirstPts = -1;
+            while (!isCancelled) {
+                aBuf.clear();
+                int size = audioExtractor.readSampleData(aBuf, 0);
+                if (size < 0) break;
+
+                long pts = audioExtractor.getSampleTime();
+                if (audioFirstPts < 0) audioFirstPts = pts;
+                long normalizedPts = pts - audioFirstPts;
+                if (maxDurationUs > 0 && normalizedPts > maxDurationUs) break;
+
+                aInfo.offset = 0;
+                aInfo.size = size;
+                aInfo.presentationTimeUs = normalizedPts;
+                aInfo.flags = audioExtractor.getSampleFlags();
+                muxer.writeSampleData(outATrack, aBuf, aInfo);
+                audioExtractor.advance();
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "muxVideoWithOriginalAudio error", e);
+            muxTempVideoOnly(tempVideoPath, finalOutputPath);
+        } finally {
+            try { if (videoExtractor != null) videoExtractor.release(); } catch (Exception ignored) {}
+            try { if (audioExtractor != null) audioExtractor.release(); } catch (Exception ignored) {}
+            try { if (muxer != null) { muxer.stop(); muxer.release(); } } catch (Exception ignored) {}
+        }
+    }
+
+    private void muxTempVideoOnly(String tempVideoPath, String outputPath) {
+        MediaExtractor extractor = null;
+        MediaMuxer muxer = null;
+        try {
+            extractor = new MediaExtractor();
+            extractor.setDataSource(tempVideoPath);
+
+            int videoTrack = -1;
+            MediaFormat format = null;
+            for (int i = 0; i < extractor.getTrackCount(); i++) {
+                MediaFormat f = extractor.getTrackFormat(i);
+                String mime = f.getString(MediaFormat.KEY_MIME);
+                if (mime != null && mime.startsWith("video/")) {
+                    videoTrack = i;
+                    format = f;
+                    break;
+                }
+            }
+
+            if (videoTrack < 0 || format == null) return;
+
+            extractor.selectTrack(videoTrack);
+            muxer = new MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+            int outTrack = muxer.addTrack(format);
+            muxer.start();
+
+            ByteBuffer buf = ByteBuffer.allocateDirect(1024 * 1024);
+            MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+
+            while (!isCancelled) {
+                buf.clear();
+                int size = extractor.readSampleData(buf, 0);
+                if (size < 0) break;
+                info.offset = 0;
+                info.size = size;
+                info.presentationTimeUs = extractor.getSampleTime();
+                info.flags = extractor.getSampleFlags();
+                muxer.writeSampleData(outTrack, buf, info);
+                extractor.advance();
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "muxTempVideoOnly error", e);
+        } finally {
+            try { if (extractor != null) extractor.release(); } catch (Exception ignored) {}
+            try { if (muxer != null) { muxer.stop(); muxer.release(); } } catch (Exception ignored) {}
+        }
+    }
+
+    private boolean awaitNewFrame(Object syncObj, boolean[] available) {
+        synchronized (syncObj) {
+            long deadline = System.currentTimeMillis() + FRAME_WAIT_TIMEOUT_MS;
+            while (!available[0]) {
+                long remaining = deadline - System.currentTimeMillis();
+                if (remaining <= 0) return false;
+                try {
+                    syncObj.wait(remaining);
+                } catch (InterruptedException e) {
+                    return false;
+                }
+            }
+            available[0] = false;
+        }
+        return true;
+    }
+
+    private long advanceFaceVideoToTime(
+            MediaCodec faceDecoder,
+            SurfaceTexture faceSurfaceTexture,
+            Object faceSyncObject,
+            boolean[] faceFrameAvailable,
+            float[] faceStMatrix,
+            long targetPtsUs,
+            long currentFacePts,
+            long[] faceFirstPtsHolder,
+            boolean[] faceOutputDoneHolder) {
+
+        if (faceDecoder == null || faceSurfaceTexture == null || faceOutputDoneHolder[0]) {
+            return currentFacePts;
+        }
+
+        while (!faceOutputDoneHolder[0]) {
+            MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+            int outIdx = faceDecoder.dequeueOutputBuffer(info, 0);
+
+            if (outIdx < 0) {
+                break;
+            }
+
+            boolean doRender = info.size != 0;
+            long rawPts = info.presentationTimeUs;
+
+            faceDecoder.releaseOutputBuffer(outIdx, doRender);
+
+            if (doRender) {
+                boolean gotFace = awaitNewFrame(faceSyncObject, faceFrameAvailable);
+                if (gotFace) {
+                    faceSurfaceTexture.updateTexImage();
+                    faceSurfaceTexture.getTransformMatrix(faceStMatrix);
+
+                    if (faceFirstPtsHolder[0] < 0) {
+                        faceFirstPtsHolder[0] = rawPts;
+                    }
+
+                    currentFacePts = rawPts - faceFirstPtsHolder[0];
+
+                    if (currentFacePts >= targetPtsUs) {
+                        break;
+                    }
+                }
+            }
+
+            if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                faceOutputDoneHolder[0] = true;
+                break;
+            }
+        }
+
+        return currentFacePts;
+    }
+
     private void renderFrame(EGLDisplay eglDisplay, EGLSurface eglSurface, EGLContext eglContext,
                              int program, int textureId, int watermarkTexId, int faceTexId,
                              int width, int height, float[] mvpMatrix, float[] stMatrix, float[] faceStMatrix,
@@ -944,11 +1477,13 @@ public class VideoProcessorMediaCodec {
         vertexBuffer.position(0);
         GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 20, vertexBuffer);
         GLES20.glEnableVertexAttribArray(positionHandle);
+
         vertexBuffer.position(3);
         GLES20.glVertexAttribPointer(textureCoordHandle, 2, GLES20.GL_FLOAT, false, 20, vertexBuffer);
         GLES20.glEnableVertexAttribArray(textureCoordHandle);
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+
         GLES20.glDisableVertexAttribArray(positionHandle);
         GLES20.glDisableVertexAttribArray(textureCoordHandle);
         GLES20.glFlush();
@@ -957,30 +1492,6 @@ public class VideoProcessorMediaCodec {
         EGL14.eglSwapBuffers(eglDisplay, eglSurface);
     }
 
-    // ════════════════════════════════════════════════════════════════════════════
-    // FRAME SYNC
-    // ════════════════════════════════════════════════════════════════════════════
-    private boolean awaitNewFrame(Object syncObj, boolean[] available) {
-        final int TIMEOUT_MS = 1500;
-        synchronized (syncObj) {
-            long deadline = System.currentTimeMillis() + TIMEOUT_MS;
-            while (!available[0]) {
-                long remaining = deadline - System.currentTimeMillis();
-                if (remaining <= 0) return false;
-                try {
-                    syncObj.wait(remaining);
-                } catch (InterruptedException e) {
-                    return false;
-                }
-            }
-            available[0] = false;
-        }
-        return true;
-    }
-
-    // ════════════════════════════════════════════════════════════════════════════
-    // SHADER PROGRAM (with FIXED Face Position - NO MIRROR)
-    // ════════════════════════════════════════════════════════════════════════════
     private int createShaderProgram(TransformSettings ts, int outW, int outH,
                                     float cropOffsetX, float cropOffsetY,
                                     float cropScaleX, float cropScaleY,
@@ -1008,167 +1519,143 @@ public class VideoProcessorMediaCodec {
         fs.append("uniform samplerExternalOES sTexture;\n");
         fs.append("uniform sampler2D sWatermark;\n");
         fs.append("uniform int uHasWatermark;\n");
-        fs.append("uniform int uFlipEnabled;\n\n");
+        fs.append("uniform int uFlipEnabled;\n");
         fs.append("uniform int uLogoRemoval;\n");
         fs.append("uniform vec4 uLogoRect;\n");
-        fs.append("uniform int uLogoMethod;\n\n");
+        fs.append("uniform int uLogoMethod;\n");
         fs.append("uniform float uTotalDuration;\n");
-        fs.append("uniform float uCurrentTime;\n\n");
-
-        // Face video uniforms
+        fs.append("uniform float uCurrentTime;\n");
         fs.append("uniform samplerExternalOES sFaceTexture;\n");
         fs.append("uniform int uHasFaceVideo;\n");
         fs.append("uniform vec4 uFaceRect;\n");
-        fs.append("uniform float uFaceCornerRadius;\n\n");
+        fs.append("uniform float uFaceCornerRadius;\n");
 
-        // HSV helpers
-        fs.append("vec3 rgb2hsv(vec3 c) {\n");
-        fs.append("    vec4 K = vec4(0.0,-1.0/3.0,2.0/3.0,-1.0);\n");
-        fs.append("    vec4 p = mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g));\n");
-        fs.append("    vec4 q = mix(vec4(p.xyw,c.r),vec4(c.r,p.yzx),step(p.x,c.r));\n");
-        fs.append("    float d=q.x-min(q.w,q.y); float e=1.0e-10;\n");
-        fs.append("    return vec3(abs(q.z+(q.w-q.y)/(6.0*d+e)),d/(q.x+e),q.x);\n");
-        fs.append("}\n");
-        fs.append("vec3 hsv2rgb(vec3 c) {\n");
-        fs.append("    vec4 K=vec4(1.0,2.0/3.0,1.0/3.0,3.0);\n");
-        fs.append("    vec3 p=abs(fract(c.xxx+K.xyz)*6.0-K.www);\n");
-        fs.append("    return c.z*mix(K.xxx,clamp(p-K.xxx,0.0,1.0),c.y);\n");
-        fs.append("}\n\n");
+        fs.append("vec3 rgb2hsv(vec3 c){");
+        fs.append("vec4 K=vec4(0.0,-1.0/3.0,2.0/3.0,-1.0);");
+        fs.append("vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g));");
+        fs.append("vec4 q=mix(vec4(p.xyw,c.r),vec4(c.r,p.yzx),step(p.x,c.r));");
+        fs.append("float d=q.x-min(q.w,q.y); float e=1.0e-10;");
+        fs.append("return vec3(abs(q.z+(q.w-q.y)/(6.0*d+e)),d/(q.x+e),q.x);}\n");
 
-        fs.append("void main() {\n");
-        fs.append("    vec2 uv = vTextureCoord;\n");
+        fs.append("vec3 hsv2rgb(vec3 c){");
+        fs.append("vec4 K=vec4(1.0,2.0/3.0,1.0/3.0,3.0);");
+        fs.append("vec3 p=abs(fract(c.xxx+K.xyz)*6.0-K.www);");
+        fs.append("return c.z*mix(K.xxx,clamp(p-K.xxx,0.0,1.0),c.y);}\n");
 
-        // Aspect ratio crop
+        fs.append("void main(){");
+        fs.append("vec2 uv=vTextureCoord;");
+
         boolean needsCrop = (cropScaleX < 0.999f || cropScaleY < 0.999f);
         if (needsCrop) {
-            fs.append("    uv = uv * vec2(").append(String.format(Locale.US, "%.6f", cropScaleX))
-                    .append(", ").append(String.format(Locale.US, "%.6f", cropScaleY)).append(");\n");
-            fs.append("    uv = uv + vec2(").append(String.format(Locale.US, "%.6f", cropOffsetX))
-                    .append(", ").append(String.format(Locale.US, "%.6f", cropOffsetY)).append(");\n");
+            fs.append("uv=uv*vec2(").append(String.format(Locale.US, "%.6f", cropScaleX))
+                    .append(",").append(String.format(Locale.US, "%.6f", cropScaleY)).append(");");
+            fs.append("uv=uv+vec2(").append(String.format(Locale.US, "%.6f", cropOffsetX))
+                    .append(",").append(String.format(Locale.US, "%.6f", cropOffsetY)).append(");");
         }
 
-        // Barrel distortion
         if (ts.barrelEnabled && ts.barrel > 0.01f) {
-            fs.append("    {\n");
-            fs.append("        vec2 p = uv - 0.5;\n");
-            fs.append("        float r2 = dot(p,p);\n");
-            fs.append("        p *= (1.0 + ").append(ts.barrel).append(" * r2);\n");
-            fs.append("        uv = p + 0.5;\n");
-            fs.append("        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {\n");
-            fs.append("            gl_FragColor = vec4(0.0,0.0,0.0,1.0); return;\n");
-            fs.append("        }\n");
-            fs.append("    }\n");
+            fs.append("{vec2 p=uv-0.5; float r2=dot(p,p); p*=(1.0+").append(ts.barrel).append("*r2); uv=p+0.5;");
+            fs.append("if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){gl_FragColor=vec4(0.0,0.0,0.0,1.0); return;}}");
         }
 
-        // Rotation
         if (ts.rotateEnabled && Math.abs(ts.rotate) > 0.01f) {
             double rad = Math.toRadians(ts.rotate);
             float cosR = (float) Math.cos(rad), sinR = (float) Math.sin(rad);
-            fs.append("    uv -= 0.5;\n");
-            fs.append("    uv = vec2(uv.x*").append(cosR).append("-uv.y*").append(sinR)
-                    .append(", uv.x*").append(sinR).append("+uv.y*").append(cosR).append(");\n");
-            fs.append("    uv += 0.5;\n");
+            fs.append("uv-=0.5;");
+            fs.append("uv=vec2(uv.x*").append(cosR).append("-uv.y*").append(sinR)
+                    .append(",uv.x*").append(sinR).append("+uv.y*").append(cosR).append(");");
+            fs.append("uv+=0.5;");
         }
 
-        // Zoom
         if (ts.zoomEnabled && ts.zoom > 1.001f) {
-            fs.append("    uv = (uv-0.5)/").append(Math.min(ts.zoom, 3f)).append("+0.5;\n");
+            fs.append("uv=(uv-0.5)/").append(Math.min(ts.zoom, 3f)).append("+0.5;");
         }
 
-        // Pixel shift
         if (ts.pixelShiftEnabled && ts.pixelShift != 0) {
             float sx = ts.pixelShift / (float) outW;
             float sy = ts.pixelShift / (float) outH;
-            fs.append("    uv += vec2(").append(sx).append(",").append(sy).append(");\n");
+            fs.append("uv+=vec2(").append(sx).append(",").append(sy).append(");");
         }
 
-        fs.append("    uv = clamp(uv, 0.001, 0.999);\n");
+        fs.append("uv=clamp(uv,0.001,0.999);");
 
-        // Chromatic aberration
         if (ts.chromaticEnabled && ts.chromatic > 0.3f) {
             float offX = ts.chromatic / outW;
-            fs.append("    float cR = texture2D(sTexture, uv - vec2(").append(offX).append(",0.0)).r;\n");
-            fs.append("    float cG = texture2D(sTexture, uv).g;\n");
-            fs.append("    float cB = texture2D(sTexture, uv + vec2(").append(offX).append(",0.0)).b;\n");
-            fs.append("    vec4 color = vec4(cR, cG, cB, 1.0);\n");
+            fs.append("float cR=texture2D(sTexture,uv-vec2(").append(offX).append(",0.0)).r;");
+            fs.append("float cG=texture2D(sTexture,uv).g;");
+            fs.append("float cB=texture2D(sTexture,uv+vec2(").append(offX).append(",0.0)).b;");
+            fs.append("vec4 color=vec4(cR,cG,cB,1.0);");
         } else {
-            fs.append("    vec4 color = texture2D(sTexture, uv);\n");
+            fs.append("vec4 color=texture2D(sTexture,uv);");
         }
 
-        // Logo removal
-        fs.append("    if(uLogoRemoval == 1) {\n");
-        fs.append("        vec2 fragNorm = vec2(gl_FragCoord.x / ").append((float)outW).append(", 1.0 - gl_FragCoord.y / ").append((float)outH).append(");\n");
-        fs.append("        if(fragNorm.x >= uLogoRect.x && fragNorm.x <= uLogoRect.z && fragNorm.y >= uLogoRect.y && fragNorm.y <= uLogoRect.w) {\n");
+        fs.append("if(uLogoRemoval==1){");
+        fs.append("vec2 fragNorm=vec2(gl_FragCoord.x/").append((float) outW).append(",1.0-gl_FragCoord.y/").append((float) outH).append(");");
+        fs.append("if(fragNorm.x>=uLogoRect.x&&fragNorm.x<=uLogoRect.z&&fragNorm.y>=uLogoRect.y&&fragNorm.y<=uLogoRect.w){");
         switch (ts.logoRemovalMethod) {
             case 0:
                 float blurStep = Math.min(ts.removalBlurIntensity / outW, 0.05f);
-                fs.append("            vec3 blurred = vec3(0.0);\n");
-                fs.append("            for(int dx = -3; dx <= 3; dx++) {\n");
-                fs.append("                for(int dy = -3; dy <= 3; dy++) {\n");
-                fs.append("                    vec2 offset = vec2(float(dx), float(dy)) * ").append(blurStep).append(";\n");
-                fs.append("                    blurred += texture2D(sTexture, clamp(uv + offset, 0.001, 0.999)).rgb;\n");
-                fs.append("                }\n");
-                fs.append("            }\n");
-                fs.append("            color.rgb = blurred / 49.0;\n");
+                fs.append("vec3 blurred=vec3(0.0);");
+                fs.append("for(int dx=-3;dx<=3;dx++){for(int dy=-3;dy<=3;dy++){");
+                fs.append("vec2 offset=vec2(float(dx),float(dy))*").append(blurStep).append(";");
+                fs.append("blurred+=texture2D(sTexture,clamp(uv+offset,0.001,0.999)).rgb;}}");
+                fs.append("color.rgb=blurred/49.0;");
                 break;
             case 1:
-                fs.append("            color.rgb = vec3(0.0);\n");
+                fs.append("color.rgb=vec3(0.0);");
                 break;
             case 2:
                 int pixelSize = 16;
                 float pxW = (float) pixelSize / outW;
                 float pxH = (float) pixelSize / outH;
-                fs.append("            vec2 pixelUV = floor(uv / vec2(").append(pxW).append(",").append(pxH).append(")) * vec2(").append(pxW).append(",").append(pxH).append(") + vec2(").append(pxW/2).append(",").append(pxH/2).append(");\n");
-                fs.append("            color.rgb = texture2D(sTexture, clamp(pixelUV, 0.001, 0.999)).rgb;\n");
+                fs.append("vec2 pixelUV=floor(uv/vec2(").append(pxW).append(",").append(pxH).append("))*vec2(")
+                        .append(pxW).append(",").append(pxH).append(")+vec2(").append(pxW / 2).append(",").append(pxH / 2).append(");");
+                fs.append("color.rgb=texture2D(sTexture,clamp(pixelUV,0.001,0.999)).rgb;");
                 break;
         }
-        fs.append("        }\n");
-        fs.append("    }\n");
+        fs.append("}}");
 
-        // Other transforms
         if (ts.brightEnabled && Math.abs(ts.bright - 1f) > 0.001f) {
-            fs.append("    color.rgb *= ").append(ts.bright).append(";\n");
+            fs.append("color.rgb*=").append(ts.bright).append(";");
         }
         if (ts.satEnabled && Math.abs(ts.saturation - 1f) > 0.001f) {
-            fs.append("    float lum = dot(color.rgb, vec3(0.2126,0.7152,0.0722));\n");
-            fs.append("    color.rgb = mix(vec3(lum), color.rgb, ").append(ts.saturation).append(");\n");
+            fs.append("float lum=dot(color.rgb,vec3(0.2126,0.7152,0.0722));");
+            fs.append("color.rgb=mix(vec3(lum),color.rgb,").append(ts.saturation).append(");");
         }
         if (ts.hueEnabled && Math.abs(ts.hue) > 0.1f) {
             float hueShift = ts.hue / 360f;
-            fs.append("    vec3 hsv = rgb2hsv(color.rgb);\n");
-            fs.append("    hsv.x = fract(hsv.x + ").append(hueShift).append(");\n");
-            fs.append("    color.rgb = hsv2rgb(hsv);\n");
+            fs.append("vec3 hsv=rgb2hsv(color.rgb); hsv.x=fract(hsv.x+").append(hueShift).append("); color.rgb=hsv2rgb(hsv);");
         }
         if (ts.gammaEnabled && Math.abs(ts.gamma - 1f) > 0.001f) {
             float invG = 1f / ts.gamma;
-            fs.append("    color.rgb = pow(max(color.rgb,0.0), vec3(").append(invG).append("));\n");
+            fs.append("color.rgb=pow(max(color.rgb,0.0),vec3(").append(invG).append("));");
         }
         if (ts.sepiaEnabled && ts.sepia > 0.001f) {
-            fs.append("    vec3 sep;\n");
-            fs.append("    sep.r=dot(color.rgb,vec3(0.393,0.769,0.189));\n");
-            fs.append("    sep.g=dot(color.rgb,vec3(0.349,0.686,0.168));\n");
-            fs.append("    sep.b=dot(color.rgb,vec3(0.272,0.534,0.131));\n");
-            fs.append("    color.rgb=mix(color.rgb,sep,").append(ts.sepia).append(");\n");
+            fs.append("vec3 sep;");
+            fs.append("sep.r=dot(color.rgb,vec3(0.393,0.769,0.189));");
+            fs.append("sep.g=dot(color.rgb,vec3(0.349,0.686,0.168));");
+            fs.append("sep.b=dot(color.rgb,vec3(0.272,0.534,0.131));");
+            fs.append("color.rgb=mix(color.rgb,sep,").append(ts.sepia).append(");");
         }
         if (ts.tintEnabled && ts.tint > 0.001f) {
             float r = ((ts.tintColor >> 16) & 0xFF) / 255f;
             float g = ((ts.tintColor >> 8) & 0xFF) / 255f;
             float b = (ts.tintColor & 0xFF) / 255f;
-            fs.append("    color.rgb=mix(color.rgb,vec3(").append(r).append(",").append(g).append(",").append(b).append("),").append(ts.tint).append(");\n");
+            fs.append("color.rgb=mix(color.rgb,vec3(").append(r).append(",").append(g).append(",").append(b).append("),").append(ts.tint).append(");");
         }
         if (ts.sharpenEnabled && ts.sharpen > 0.001f) {
             float stepX = 1f / outW;
             float stepY = 1f / outH;
-            fs.append("    vec3 sblur = texture2D(sTexture,uv+vec2(-").append(stepX).append(",0.0)).rgb+");
+            fs.append("vec3 sblur=texture2D(sTexture,uv+vec2(-").append(stepX).append(",0.0)).rgb+");
             fs.append("texture2D(sTexture,uv+vec2(").append(stepX).append(",0.0)).rgb+");
             fs.append("texture2D(sTexture,uv+vec2(0.0,-").append(stepY).append(")).rgb+");
-            fs.append("texture2D(sTexture,uv+vec2(0.0,").append(stepY).append(")).rgb;\n");
-            fs.append("    sblur *= 0.25;\n");
-            fs.append("    color.rgb += (color.rgb - sblur) * ").append(ts.sharpen).append(";\n");
+            fs.append("texture2D(sTexture,uv+vec2(0.0,").append(stepY).append(")).rgb;");
+            fs.append("sblur*=0.25;");
+            fs.append("color.rgb+=(color.rgb-sblur)*").append(ts.sharpen).append(";");
         }
         if (ts.blurEnabled && ts.blur > 0.01f) {
             float blurOff = ts.blur / outW;
-            fs.append("    vec3 blurred = texture2D(sTexture,uv+vec2(-").append(blurOff).append(",-").append(blurOff).append(")).rgb+");
+            fs.append("vec3 blurred=texture2D(sTexture,uv+vec2(-").append(blurOff).append(",-").append(blurOff).append(")).rgb+");
             fs.append("texture2D(sTexture,uv+vec2(0.0,-").append(blurOff).append(")).rgb+");
             fs.append("texture2D(sTexture,uv+vec2(").append(blurOff).append(",-").append(blurOff).append(")).rgb+");
             fs.append("texture2D(sTexture,uv+vec2(-").append(blurOff).append(",0.0)).rgb+");
@@ -1176,28 +1663,27 @@ public class VideoProcessorMediaCodec {
             fs.append("texture2D(sTexture,uv+vec2(").append(blurOff).append(",0.0)).rgb+");
             fs.append("texture2D(sTexture,uv+vec2(-").append(blurOff).append(",").append(blurOff).append(")).rgb+");
             fs.append("texture2D(sTexture,uv+vec2(0.0,").append(blurOff).append(")).rgb+");
-            fs.append("texture2D(sTexture,uv+vec2(").append(blurOff).append(",").append(blurOff).append(")).rgb;\n");
-            fs.append("    color.rgb = blurred / 9.0;\n");
+            fs.append("texture2D(sTexture,uv+vec2(").append(blurOff).append(",").append(blurOff).append(")).rgb;");
+            fs.append("color.rgb=blurred/9.0;");
         }
         if (ts.noiseEnabled && ts.noise > 0.0001f) {
-            fs.append("    float n=fract(sin(dot(uv,vec2(12.9898,78.233)))*43758.5453);\n");
-            fs.append("    color.rgb += (n-0.5)*").append(ts.noise).append(";\n");
+            fs.append("float n=fract(sin(dot(uv,vec2(12.9898,78.233)))*43758.5453);");
+            fs.append("color.rgb+=(n-0.5)*").append(ts.noise).append(";");
         }
         if (ts.vignetteEnabled && ts.vignette > 0.001f) {
-            fs.append("    vec2 vc=uv-0.5;\n");
-            fs.append("    float vf=1.0-dot(vc,vc)*").append(ts.vignette * 2f).append(";\n");
-            fs.append("    color.rgb *= clamp(vf,0.0,1.0);\n");
+            fs.append("vec2 vc=uv-0.5;");
+            fs.append("float vf=1.0-dot(vc,vc)*").append(ts.vignette * 2f).append(";");
+            fs.append("color.rgb*=clamp(vf,0.0,1.0);");
         }
         if (ts.borderEnabled && ts.border > 0) {
             float bx = ts.border / (float) outW;
             float by = ts.border / (float) outH;
-            fs.append("    if(uv.x<").append(bx).append("||uv.x>").append(1f - bx)
-                    .append("||uv.y<").append(by).append("||uv.y>").append(1f - by).append(") color.rgb=vec3(0.0);\n");
+            fs.append("if(uv.x<").append(bx).append("||uv.x>").append(1f - bx)
+                    .append("||uv.y<").append(by).append("||uv.y>").append(1f - by).append(") color.rgb=vec3(0.0);");
         }
 
-        fs.append("    color.rgb = clamp(color.rgb, 0.0, 1.0);\n");
+        fs.append("color.rgb=clamp(color.rgb,0.0,1.0);");
 
-        // Border progress
         if (ts.borderProgressEnabled && ts.borderProgressSize > 0) {
             float bpSizeX = ts.borderProgressSize / (float) outW;
             float bpSizeY = ts.borderProgressSize / (float) outH;
@@ -1205,61 +1691,50 @@ public class VideoProcessorMediaCodec {
             float bpG = ((ts.borderProgressColor >> 8) & 0xFF) / 255f;
             float bpB = (ts.borderProgressColor & 0xFF) / 255f;
 
-            fs.append("    {\n");
-            fs.append("        float progress = clamp(uCurrentTime / max(uTotalDuration, 0.01), 0.0, 1.0);\n");
-            fs.append("        float bpx = ").append(String.format(Locale.US, "%.6f", bpSizeX)).append(";\n");
-            fs.append("        float bpy = ").append(String.format(Locale.US, "%.6f", bpSizeY)).append(";\n");
-            fs.append("        float totalProgress = progress * 4.0;\n");
-            fs.append("        bool hit = false;\n");
-            fs.append("        vec2 sc = vTextureCoord;\n");
-            fs.append("        if(sc.y <= bpy && sc.x <= clamp(totalProgress, 0.0, 1.0)) hit = true;\n");
-            fs.append("        if(sc.x >= (1.0 - bpx) && totalProgress >= 1.0 && sc.y <= clamp(totalProgress - 1.0, 0.0, 1.0)) hit = true;\n");
-            fs.append("        if(sc.y >= (1.0 - bpy) && totalProgress >= 2.0 && sc.x >= (1.0 - clamp(totalProgress - 2.0, 0.0, 1.0))) hit = true;\n");
-            fs.append("        if(sc.x <= bpx && totalProgress >= 3.0 && sc.y >= (1.0 - clamp(totalProgress - 3.0, 0.0, 1.0))) hit = true;\n");
-            fs.append("        if(hit) color.rgb = mix(color.rgb, vec3(")
-                    .append(String.format(Locale.US, "%.3f", bpR)).append(", ")
-                    .append(String.format(Locale.US, "%.3f", bpG)).append(", ")
-                    .append(String.format(Locale.US, "%.3f", bpB)).append("), 0.85);\n");
-            fs.append("    }\n");
+            fs.append("{");
+            fs.append("float progress=clamp(uCurrentTime/max(uTotalDuration,0.01),0.0,1.0);");
+            fs.append("float bpx=").append(String.format(Locale.US, "%.6f", bpSizeX)).append(";");
+            fs.append("float bpy=").append(String.format(Locale.US, "%.6f", bpSizeY)).append(";");
+            fs.append("float totalProgress=progress*4.0;");
+            fs.append("bool hit=false;");
+            fs.append("vec2 sc=vTextureCoord;");
+            fs.append("if(sc.y<=bpy&&sc.x<=clamp(totalProgress,0.0,1.0)) hit=true;");
+            fs.append("if(sc.x>=(1.0-bpx)&&totalProgress>=1.0&&sc.y<=clamp(totalProgress-1.0,0.0,1.0)) hit=true;");
+            fs.append("if(sc.y>=(1.0-bpy)&&totalProgress>=2.0&&sc.x>=(1.0-clamp(totalProgress-2.0,0.0,1.0))) hit=true;");
+            fs.append("if(sc.x<=bpx&&totalProgress>=3.0&&sc.y>=(1.0-clamp(totalProgress-3.0,0.0,1.0))) hit=true;");
+            fs.append("if(hit) color.rgb=mix(color.rgb,vec3(")
+                    .append(String.format(Locale.US, "%.3f", bpR)).append(",")
+                    .append(String.format(Locale.US, "%.3f", bpG)).append(",")
+                    .append(String.format(Locale.US, "%.3f", bpB)).append("),0.85);");
+            fs.append("}");
         }
 
-        fs.append("    color.rgb = clamp(color.rgb, 0.0, 1.0);\n");
+        fs.append("color.rgb=clamp(color.rgb,0.0,1.0);");
 
-        // ★★★ FIXED: Reaction Face Overlay - NO MIRROR ★★★
-        fs.append("\n    // ═══ Reaction Face Overlay (NO MIRROR) ═══\n");
-        fs.append("    if(uHasFaceVideo == 1) {\n");
-        fs.append("        vec2 screenUV = vec2(gl_FragCoord.x / ").append((float)outW).append(", 1.0 - gl_FragCoord.y / ").append((float)outH).append(");\n");
-        fs.append("        float faceX = uFaceRect.x;\n");
-        fs.append("        float faceY = uFaceRect.y;\n");
-        fs.append("        float faceW = uFaceRect.z;\n");
-        fs.append("        float faceH = uFaceRect.w;\n");
-        fs.append("        if(screenUV.x >= faceX && screenUV.x <= faceX + faceW &&\n");
-        fs.append("           screenUV.y >= faceY && screenUV.y <= faceY + faceH) {\n");
-        fs.append("            vec2 localUV = (screenUV - vec2(faceX, faceY)) / vec2(faceW, faceH);\n");
-        fs.append("            vec2 center = vec2(0.5, 0.5);\n");
-        fs.append("            vec2 fromCenter = abs(localUV - center);\n");
-        fs.append("            float cornerR = uFaceCornerRadius;\n");
-        fs.append("            float dist = length(max(fromCenter - (0.5 - cornerR), 0.0)) - cornerR;\n");
-        fs.append("            if(dist <= 0.0) {\n");
-        fs.append("                vec2 faceTexCoord = vec2(localUV.x, localUV.y);\n");
-        fs.append("                vec4 faceColor = texture2D(sFaceTexture, faceTexCoord);\n");
-        fs.append("                float edgeSmooth = 1.0 - smoothstep(-0.02, 0.005, dist);\n");
-        fs.append("                color.rgb = mix(color.rgb, faceColor.rgb, edgeSmooth);\n");
-        fs.append("            }\n");
-        fs.append("        }\n");
-        fs.append("    }\n");
+        fs.append("if(uHasFaceVideo==1){");
+        fs.append("vec2 screenUV=vec2(gl_FragCoord.x/").append((float) outW).append(",1.0-gl_FragCoord.y/").append((float) outH).append(");");
+        fs.append("float faceX=uFaceRect.x; float faceY=uFaceRect.y; float faceW=uFaceRect.z; float faceH=uFaceRect.w;");
+        fs.append("if(screenUV.x>=faceX&&screenUV.x<=faceX+faceW&&screenUV.y>=faceY&&screenUV.y<=faceY+faceH){");
+        fs.append("vec2 localUV=(screenUV-vec2(faceX,faceY))/vec2(faceW,faceH);");
+        fs.append("vec2 center=vec2(0.5,0.5);");
+        fs.append("vec2 fromCenter=abs(localUV-center);");
+        fs.append("float cornerR=uFaceCornerRadius;");
+        fs.append("float dist=length(max(fromCenter-(0.5-cornerR),0.0))-cornerR;");
+        fs.append("if(dist<=0.0){");
+        fs.append("vec2 faceTexCoord=vec2(localUV.x,localUV.y);");
+        fs.append("vec4 faceColor=texture2D(sFaceTexture,faceTexCoord);");
+        fs.append("float edgeSmooth=1.0-smoothstep(-0.02,0.005,dist);");
+        fs.append("color.rgb=mix(color.rgb,faceColor.rgb,edgeSmooth);");
+        fs.append("}}}");
 
-        // Watermark
-        fs.append("\n    if(uHasWatermark==1){\n");
-        fs.append("        vec2 wmCoord = vTextureCoord;\n");
-        fs.append("        if(uFlipEnabled == 1) wmCoord.x = 1.0 - wmCoord.x;\n");
-        fs.append("        vec4 wm = texture2D(sWatermark, wmCoord);\n");
-        fs.append("        color.rgb = mix(color.rgb, wm.rgb, wm.a);\n");
-        fs.append("    }\n");
+        fs.append("if(uHasWatermark==1){");
+        fs.append("vec2 wmCoord=vTextureCoord;");
+        fs.append("if(uFlipEnabled==1) wmCoord.x=1.0-wmCoord.x;");
+        fs.append("vec4 wm=texture2D(sWatermark,wmCoord);");
+        fs.append("color.rgb=mix(color.rgb,wm.rgb,wm.a);");
+        fs.append("}");
 
-        fs.append("    gl_FragColor = color;\n");
-        fs.append("}\n");
-
+        fs.append("gl_FragColor=color;}");
         int vs = compileShader(GLES20.GL_VERTEX_SHADER, vertexShader);
         int fsh = compileShader(GLES20.GL_FRAGMENT_SHADER, fs.toString());
         if (vs == 0 || fsh == 0) return 0;
@@ -1293,389 +1768,6 @@ public class VideoProcessorMediaCodec {
             return 0;
         }
         return shader;
-    }
-
-    // ════════════════════════════════════════════════════════════════════════════
-    // AUDIO PROCESSING WITH FACE AUDIO MIXING (70% Main / 100% Face)
-    // ════════════════════════════════════════════════════════════════════════════
-    private void processAudioWithFaceMix(Context context, Uri inputUri, String videoOutputPath,
-                                         int audioTrackIndex, MediaFormat audioFormat,
-                                         long trimStartUs, float speedFactor, float volumeFactor,
-                                         long maxDurationUs, ProgressCallback callback, TransformSettings ts,
-                                         ArrayList<byte[]> videoChunks,
-                                         ArrayList<MediaCodec.BufferInfo> videoChunkInfos,
-                                         MediaFormat encodedVideoFormat,
-                                         boolean hasFaceAudio, Uri faceUri,
-                                         int faceAudioTrackIndex, MediaFormat faceAudioFormat) {
-
-        String finalOutputPath = videoOutputPath.replace(".mp4", "_final.mp4");
-        MediaExtractor audioExtractor = null;
-        MediaCodec audioDecoder = null;
-        MediaExtractor faceAudioExtractor = null;
-        MediaCodec faceAudioDecoder = null;
-        MediaCodec audioEncoder = null;
-
-        try {
-            audioExtractor = new MediaExtractor();
-            audioExtractor.setDataSource(context, inputUri, null);
-            audioExtractor.selectTrack(audioTrackIndex);
-            if (trimStartUs > 0)
-                audioExtractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
-
-            String audioMime = audioFormat.getString(MediaFormat.KEY_MIME);
-            int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
-            int channelCount = audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
-
-            // ★★★ VOLUME CALCULATION: Face enabled = 70%/100%, Face disabled = 100% ★★★
-            final float MAIN_VIDEO_VOLUME;
-            final float FACE_VIDEO_VOLUME;
-
-            boolean useFaceAudio = hasFaceAudio && faceUri != null && faceAudioTrackIndex >= 0 && faceAudioFormat != null;
-
-            if (useFaceAudio) {
-                // Face video enabled: Main 70%, Face 100%
-                MAIN_VIDEO_VOLUME = volumeFactor * 0.70f;
-                FACE_VIDEO_VOLUME = 1.0f;
-                Log.d(TAG, "★ Audio Mix Mode: Main=70%, Face=100%");
-            } else {
-                // Face video disabled: Main 100%
-                MAIN_VIDEO_VOLUME = volumeFactor * 1.0f;
-                FACE_VIDEO_VOLUME = 0.0f;
-                Log.d(TAG, "★ Audio Solo Mode: Main=100%");
-            }
-
-            Log.d(TAG, "Face audio check: hasFaceAudio=" + hasFaceAudio + " faceUri=" + faceUri +
-                    " trackIndex=" + faceAudioTrackIndex + " format=" + (faceAudioFormat != null));
-
-            if (useFaceAudio) {
-                try {
-                    faceAudioExtractor = new MediaExtractor();
-                    faceAudioExtractor.setDataSource(context, faceUri, null);
-                    faceAudioExtractor.selectTrack(faceAudioTrackIndex);
-                    if (trimStartUs > 0)
-                        faceAudioExtractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
-
-                    String faceMime = faceAudioFormat.getString(MediaFormat.KEY_MIME);
-
-                    faceAudioDecoder = MediaCodec.createDecoderByType(faceMime);
-                    faceAudioDecoder.configure(faceAudioFormat, null, null, 0);
-                    faceAudioDecoder.start();
-
-                    Log.d(TAG, "★ Face audio decoder started");
-                } catch (Exception e) {
-                    Log.e(TAG, "Face audio setup error", e);
-                    useFaceAudio = false;
-                }
-            } else {
-                Log.d(TAG, "Face audio not available or disabled");
-            }
-
-            final boolean mixFaceAudio = useFaceAudio;
-
-            final int AP_START = 75, AP_END = 90;
-            int estimatedSamples = (int) (maxDurationUs * (long) sampleRate / 1_000_000L / 1024);
-            if (estimatedSamples < 1) estimatedSamples = 1;
-
-            audioDecoder = MediaCodec.createDecoderByType(audioMime);
-            audioDecoder.configure(audioFormat, null, null, 0);
-            audioDecoder.start();
-
-            MediaFormat encFmt = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, channelCount);
-            encFmt.setInteger(MediaFormat.KEY_BIT_RATE, 128000);
-            encFmt.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
-            encFmt.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 16384);
-
-            audioEncoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
-            audioEncoder.configure(encFmt, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-            audioEncoder.start();
-
-            MediaCodec.BufferInfo decInfo = new MediaCodec.BufferInfo();
-            MediaCodec.BufferInfo encInfo = new MediaCodec.BufferInfo();
-            MediaCodec.BufferInfo faceDecInfo = new MediaCodec.BufferInfo();
-
-            boolean inputDone = false, decodeDone = false, encodeDone = false;
-            boolean faceInputDone = false, faceDecodeDone = false;
-            ArrayList<byte[]> encodedChunks = new ArrayList<>();
-            ArrayList<MediaCodec.BufferInfo> chunkInfos = new ArrayList<>();
-            MediaFormat outputAudioFormat = null;
-
-            long firstPts = -1L, lastOutputPts = -1L;
-            int processedSamples = 0;
-            long lastAudioProgress = System.currentTimeMillis();
-            short[] pendingSamples = null;
-            long pendingPts = 0;
-            boolean eosSignalPending = false;
-
-            short[] pendingFaceSamples = null;
-            int faceBufferReadPos = 0;
-
-            while (!encodeDone && !isCancelled) {
-
-                // Main audio decoder input
-                if (!inputDone) {
-                    int inIdx = audioDecoder.dequeueInputBuffer(TIMEOUT_US);
-                    if (inIdx >= 0) {
-                        ByteBuffer inBuf = audioDecoder.getInputBuffer(inIdx);
-                        if (inBuf != null) {
-                            inBuf.clear();
-                            int sz = audioExtractor.readSampleData(inBuf, 0);
-                            if (sz < 0) {
-                                audioDecoder.queueInputBuffer(inIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                                inputDone = true;
-                            } else {
-                                audioDecoder.queueInputBuffer(inIdx, 0, sz, audioExtractor.getSampleTime(), 0);
-                                audioExtractor.advance();
-                            }
-                        }
-                    }
-                }
-
-                // Face audio decoder input
-                if (mixFaceAudio && !faceInputDone && faceAudioDecoder != null && faceAudioExtractor != null) {
-                    int faceInIdx = faceAudioDecoder.dequeueInputBuffer(0);
-                    if (faceInIdx >= 0) {
-                        ByteBuffer faceInBuf = faceAudioDecoder.getInputBuffer(faceInIdx);
-                        if (faceInBuf != null) {
-                            faceInBuf.clear();
-                            int sz = faceAudioExtractor.readSampleData(faceInBuf, 0);
-                            if (sz < 0) {
-                                faceAudioDecoder.queueInputBuffer(faceInIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                                faceInputDone = true;
-                            } else {
-                                faceAudioDecoder.queueInputBuffer(faceInIdx, 0, sz, faceAudioExtractor.getSampleTime(), 0);
-                                faceAudioExtractor.advance();
-                            }
-                        }
-                    }
-                }
-
-                // Face audio decoder output
-                if (mixFaceAudio && !faceDecodeDone && faceAudioDecoder != null) {
-                    int faceOutIdx = faceAudioDecoder.dequeueOutputBuffer(faceDecInfo, 0);
-                    if (faceOutIdx >= 0) {
-                        boolean isEos = (faceDecInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
-                        ByteBuffer faceOutBuf = faceAudioDecoder.getOutputBuffer(faceOutIdx);
-
-                        if (faceDecInfo.size > 0 && faceOutBuf != null) {
-                            faceOutBuf.position(faceDecInfo.offset);
-                            faceOutBuf.limit(faceDecInfo.offset + faceDecInfo.size);
-                            ShortBuffer sb = faceOutBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
-                            short[] newFaceSamples = new short[sb.remaining()];
-                            sb.get(newFaceSamples);
-
-                            if (pendingFaceSamples == null) {
-                                pendingFaceSamples = newFaceSamples;
-                                faceBufferReadPos = 0;
-                            } else {
-                                int remaining = pendingFaceSamples.length - faceBufferReadPos;
-                                short[] combined = new short[remaining + newFaceSamples.length];
-                                System.arraycopy(pendingFaceSamples, faceBufferReadPos, combined, 0, remaining);
-                                System.arraycopy(newFaceSamples, 0, combined, remaining, newFaceSamples.length);
-                                pendingFaceSamples = combined;
-                                faceBufferReadPos = 0;
-                            }
-                        }
-
-                        faceAudioDecoder.releaseOutputBuffer(faceOutIdx, false);
-                        if (isEos) {
-                            faceDecodeDone = true;
-                            Log.d(TAG, "Face audio decode done");
-                        }
-                    }
-                }
-
-                // Encoder input - pending first
-                if (pendingSamples != null) {
-                    int encInIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
-                    if (encInIdx >= 0) {
-                        writeSamplesToEncoder(audioEncoder, encInIdx, pendingSamples, pendingPts);
-                        lastOutputPts = pendingPts;
-                        processedSamples++;
-                        pendingSamples = null;
-                        if (eosSignalPending) {
-                            int eosIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
-                            if (eosIdx >= 0) {
-                                audioEncoder.queueInputBuffer(eosIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                                eosSignalPending = false;
-                            }
-                        }
-                    }
-                } else if (!decodeDone) {
-                    int outIdx = audioDecoder.dequeueOutputBuffer(decInfo, TIMEOUT_US);
-                    if (outIdx >= 0) {
-                        boolean isEos = (decInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
-                        ByteBuffer outBuf = audioDecoder.getOutputBuffer(outIdx);
-
-                        if (decInfo.size > 0 && outBuf != null) {
-                            outBuf.position(decInfo.offset);
-                            outBuf.limit(decInfo.offset + decInfo.size);
-                            ShortBuffer sb = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
-                            short[] samples = new short[sb.remaining()];
-                            sb.get(samples);
-
-                            // ★★★ FIXED: Apply main video volume (70% if face enabled, 100% otherwise) ★★★
-                            for (int i = 0; i < samples.length; i++) {
-                                float s = samples[i] * MAIN_VIDEO_VOLUME;
-                                samples[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) s));
-                            }
-
-                            // ★★★ MIX FACE AUDIO at 100% volume ★★★
-                            if (mixFaceAudio && pendingFaceSamples != null) {
-                                int available = pendingFaceSamples.length - faceBufferReadPos;
-                                int toMix = Math.min(samples.length, available);
-
-                                for (int i = 0; i < toMix; i++) {
-                                    float mainSample = samples[i];
-                                    float faceSample = pendingFaceSamples[faceBufferReadPos + i] * FACE_VIDEO_VOLUME;
-                                    float mixed = mainSample + faceSample;
-                                    if (mixed > Short.MAX_VALUE) mixed = Short.MAX_VALUE;
-                                    if (mixed < Short.MIN_VALUE) mixed = Short.MIN_VALUE;
-                                    samples[i] = (short) mixed;
-                                }
-
-                                faceBufferReadPos += toMix;
-                                if (faceBufferReadPos >= pendingFaceSamples.length) {
-                                    pendingFaceSamples = null;
-                                    faceBufferReadPos = 0;
-                                }
-                            }
-
-                            // Other audio transforms
-                            if (ts.pitchEnabled && Math.abs(ts.pitch - 1f) > 0.005f) {
-                                samples = applyPitchToSamples(samples, ts.pitch, channelCount);
-                            }
-                            if (ts.spectralNoiseEnabled && ts.spectralNoise > 0.0001f) {
-                                samples = applySpectralNoise(samples, ts.spectralNoise, sampleRate);
-                            }
-                            if (ts.ambientNoiseEnabled && ts.ambientNoiseLevel > 0.0001f) {
-                                samples = applyAmbientNoise(samples, ts.ambientNoiseLevel);
-                            }
-
-                            long pts = decInfo.presentationTimeUs;
-                            if (firstPts < 0) firstPts = pts;
-                            long outputPts = (long) ((pts - firstPts) / speedFactor);
-
-                            if (maxDurationUs > 0 && outputPts >= maxDurationUs) {
-                                audioDecoder.releaseOutputBuffer(outIdx, false);
-                                decodeDone = true;
-                                eosSignalPending = true;
-                                continue;
-                            }
-
-                            if (lastOutputPts >= 0 && outputPts <= lastOutputPts)
-                                outputPts = lastOutputPts + 1;
-
-                            int encInIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
-                            if (encInIdx >= 0) {
-                                writeSamplesToEncoder(audioEncoder, encInIdx, samples, outputPts);
-                                lastOutputPts = outputPts;
-                                processedSamples++;
-                            } else {
-                                pendingSamples = samples;
-                                pendingPts = outputPts;
-                            }
-                        }
-
-                        audioDecoder.releaseOutputBuffer(outIdx, false);
-
-                        if (isEos) {
-                            decodeDone = true;
-                            if (pendingSamples == null) {
-                                int eosIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
-                                if (eosIdx >= 0) {
-                                    audioEncoder.queueInputBuffer(eosIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                                } else {
-                                    eosSignalPending = true;
-                                }
-                            } else {
-                                eosSignalPending = true;
-                            }
-                        }
-
-                        if (System.currentTimeMillis() - lastAudioProgress > 250) {
-                            int pct = AP_START + (int) ((AP_END - AP_START) * (double) processedSamples / estimatedSamples);
-                            String msg = mixFaceAudio ? "অডিও মিক্স: " + processedSamples : "অডিও: " + processedSamples;
-                            callback.onProgress(Math.min(AP_END, Math.max(AP_START, pct)), msg);
-                            lastAudioProgress = System.currentTimeMillis();
-                        }
-                    }
-                }
-
-                if (decodeDone && pendingSamples == null && eosSignalPending) {
-                    int eosIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
-                    if (eosIdx >= 0) {
-                        audioEncoder.queueInputBuffer(eosIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                        eosSignalPending = false;
-                    }
-                }
-
-                while (true) {
-                    int encOutIdx = audioEncoder.dequeueOutputBuffer(encInfo, TIMEOUT_US);
-                    if (encOutIdx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                        outputAudioFormat = audioEncoder.getOutputFormat();
-                    } else if (encOutIdx >= 0) {
-                        ByteBuffer encOutBuf = audioEncoder.getOutputBuffer(encOutIdx);
-                        if (encInfo.size > 0 && (encInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0
-                                && encOutBuf != null) {
-                            byte[] chunk = new byte[encInfo.size];
-                            encOutBuf.position(encInfo.offset);
-                            encOutBuf.get(chunk);
-                            encodedChunks.add(chunk);
-                            MediaCodec.BufferInfo ci = new MediaCodec.BufferInfo();
-                            ci.set(0, chunk.length, encInfo.presentationTimeUs, encInfo.flags);
-                            chunkInfos.add(ci);
-                        }
-                        audioEncoder.releaseOutputBuffer(encOutIdx, false);
-                        if ((encInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                            encodeDone = true;
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            Log.d(TAG, "Audio done: samples=" + processedSamples + " chunks=" + encodedChunks.size() + " faceAudioMixed=" + mixFaceAudio);
-
-            if (!isCancelled && outputAudioFormat != null && !encodedChunks.isEmpty()) {
-                callback.onProgress(AP_END, "মিক্স হচ্ছে...");
-                muxVideoAndAudioInMemory(encodedVideoFormat, videoChunks, videoChunkInfos,
-                        outputAudioFormat, encodedChunks, chunkInfos, finalOutputPath);
-
-                File orig = new File(videoOutputPath);
-                File final_ = new File(finalOutputPath);
-                if (final_.exists() && final_.length() > orig.length() / 2) {
-                    orig.delete();
-                    final_.renameTo(orig);
-                } else {
-                    final_.delete();
-                }
-            }
-
-        } catch (Exception e) {
-            Log.e(TAG, "Audio processing error", e);
-        } finally {
-            try { if (audioDecoder != null) { audioDecoder.stop(); audioDecoder.release(); } } catch (Exception ignored) {}
-            try { if (audioEncoder != null) { audioEncoder.stop(); audioEncoder.release(); } } catch (Exception ignored) {}
-            try { if (audioExtractor != null) audioExtractor.release(); } catch (Exception ignored) {}
-            try { if (faceAudioDecoder != null) { faceAudioDecoder.stop(); faceAudioDecoder.release(); } } catch (Exception ignored) {}
-            try { if (faceAudioExtractor != null) faceAudioExtractor.release(); } catch (Exception ignored) {}
-        }
-    }
-
-    private void writeSamplesToEncoder(MediaCodec encoder, int bufIdx, short[] samples, long pts) {
-        ByteBuffer buf = encoder.getInputBuffer(bufIdx);
-        if (buf == null) {
-            encoder.queueInputBuffer(bufIdx, 0, 0, pts, 0);
-            return;
-        }
-        buf.clear();
-        ByteBuffer pcm = ByteBuffer.allocate(samples.length * 2).order(ByteOrder.LITTLE_ENDIAN);
-        pcm.asShortBuffer().put(samples);
-        int writeLen = Math.min(pcm.array().length, buf.capacity());
-        buf.put(pcm.array(), 0, writeLen);
-        encoder.queueInputBuffer(bufIdx, 0, writeLen, pts, 0);
     }
 
     private short[] applySpectralNoise(short[] samples, float noiseLevel, int sampleRate) {
@@ -1733,52 +1825,9 @@ public class VideoProcessorMediaCodec {
         return output;
     }
 
-    private void muxVideoOnly(MediaFormat videoFormat, ArrayList<byte[]> chunks, ArrayList<MediaCodec.BufferInfo> infos, String outputPath) {
-        MediaMuxer muxer = null;
-        try {
-            muxer = new MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-            int track = muxer.addTrack(videoFormat);
-            muxer.start();
-            for (int i = 0; i < chunks.size(); i++)
-                muxer.writeSampleData(track, ByteBuffer.wrap(chunks.get(i)), infos.get(i));
-        } catch (Exception e) {
-            Log.e(TAG, "muxVideoOnly error", e);
-        } finally {
-            try { if (muxer != null) { muxer.stop(); muxer.release(); } } catch (Exception ignored) {}
-        }
-    }
-
-    private void muxVideoAndAudioInMemory(MediaFormat videoFormat, ArrayList<byte[]> vChunks, ArrayList<MediaCodec.BufferInfo> vInfos,
-                                          MediaFormat audioFormat, ArrayList<byte[]> aChunks, ArrayList<MediaCodec.BufferInfo> aInfos,
-                                          String outputPath) {
-        MediaMuxer muxer = null;
-        try {
-            muxer = new MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-            int vTrack = muxer.addTrack(videoFormat);
-            int aTrack = muxer.addTrack(audioFormat);
-            muxer.start();
-            int vi = 0, ai = 0;
-            while (vi < vChunks.size() || ai < aChunks.size()) {
-                boolean writeVideo;
-                if (vi >= vChunks.size()) writeVideo = false;
-                else if (ai >= aChunks.size()) writeVideo = true;
-                else writeVideo = vInfos.get(vi).presentationTimeUs <= aInfos.get(ai).presentationTimeUs;
-                if (writeVideo) {
-                    muxer.writeSampleData(vTrack, ByteBuffer.wrap(vChunks.get(vi)), vInfos.get(vi++));
-                } else {
-                    muxer.writeSampleData(aTrack, ByteBuffer.wrap(aChunks.get(ai)), aInfos.get(ai++));
-                }
-            }
-            Log.d(TAG, "Mux done: v=" + vi + " a=" + ai);
-        } catch (Exception e) {
-            Log.e(TAG, "muxInMemory error", e);
-        } finally {
-            try { if (muxer != null) { muxer.stop(); muxer.release(); } } catch (Exception ignored) {}
-        }
-    }
-
-    private Bitmap createWatermarkBitmap(WatermarkConfig wm, int w, int h, long currentTimeUs) {
+    private Bitmap createWatermarkBitmapOptimized(WatermarkConfig wm, int w, int h, long currentTimeUs) {
         if (wm == null || !wm.isActive()) return null;
+
         Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
         int pad = 20;
@@ -1786,27 +1835,32 @@ public class VideoProcessorMediaCodec {
         WatermarkConfig.Position currentLogoPos = wm.getDynamicPosition(currentTimeUs);
         WatermarkConfig.Position currentTextPos = wm.dynamicPosition ? wm.getDynamicPosition(currentTimeUs + 500_000) : wm.textPosition;
 
-        if ((wm.mode == WatermarkConfig.Mode.LOGO || wm.mode == WatermarkConfig.Mode.BOTH) && logo != null && !logo.isRecycled()) {
-            int lW = w * wm.logoSize / 100;
-            int lH = Math.round((float) lW * logo.getHeight() / logo.getWidth());
+        if ((wm.mode == WatermarkConfig.Mode.LOGO || wm.mode == WatermarkConfig.Mode.BOTH) &&
+                logo != null && !logo.isRecycled()) {
+            int lW = Math.max(1, w * wm.logoSize / 100);
+            int lH = Math.max(1, Math.round((float) lW * logo.getHeight() / logo.getWidth()));
             Bitmap scaled = Bitmap.createScaledBitmap(logo, lW, lH, true);
-            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
             p.setAlpha(Math.round(wm.logoOpacity / 100f * 255));
             canvas.drawBitmap(scaled, calcX(currentLogoPos, lW, w, pad), calcY(currentLogoPos, lH, h, pad), p);
             if (scaled != logo) scaled.recycle();
         }
 
-        if ((wm.mode == WatermarkConfig.Mode.TEXT || wm.mode == WatermarkConfig.Mode.BOTH) && wm.text != null && !wm.text.trim().isEmpty()) {
+        if ((wm.mode == WatermarkConfig.Mode.TEXT || wm.mode == WatermarkConfig.Mode.BOTH) &&
+                wm.text != null && !wm.text.trim().isEmpty()) {
             Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
             p.setTextSize(wm.fontSize);
             p.setTypeface(wm.textStyle == WatermarkConfig.TextStyle.BOLD ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
             float tw = p.measureText(wm.text);
-            int extraY = (wm.mode == WatermarkConfig.Mode.BOTH && logo != null && currentLogoPos == currentTextPos) ? h * wm.logoSize / 100 + 10 : 0;
+            int extraY = (wm.mode == WatermarkConfig.Mode.BOTH && logo != null && currentLogoPos == currentTextPos)
+                    ? h * wm.logoSize / 100 + 10 : 0;
             float x = calcX(currentTextPos, (int) tw, w, pad);
             float y = calcTextY(currentTextPos, wm.fontSize, h, pad, extraY);
+
             p.setColor(Color.BLACK);
             p.setAlpha(Math.round(wm.textOpacity / 100f * 128));
             canvas.drawText(wm.text, x + 2, y + 2, p);
+
             if (wm.textStyle == WatermarkConfig.TextStyle.OUTLINE) {
                 p.setStyle(Paint.Style.STROKE);
                 p.setStrokeWidth(3f);
@@ -1815,6 +1869,7 @@ public class VideoProcessorMediaCodec {
                 canvas.drawText(wm.text, x, y, p);
                 p.setStyle(Paint.Style.FILL);
             }
+
             p.setColor(wm.textColor);
             p.setAlpha(Math.round(wm.textOpacity / 100f * 255));
             canvas.drawText(wm.text, x, y, p);
@@ -1824,25 +1879,37 @@ public class VideoProcessorMediaCodec {
 
     private float calcX(WatermarkConfig.Position pos, int w, int cW, int pad) {
         switch (pos) {
-            case TOP_RIGHT: case BOTTOM_RIGHT: return cW - w - pad;
-            case CENTER: return (cW - w) / 2f;
-            default: return pad;
+            case TOP_RIGHT:
+            case BOTTOM_RIGHT:
+                return cW - w - pad;
+            case CENTER:
+                return (cW - w) / 2f;
+            default:
+                return pad;
         }
     }
 
     private float calcY(WatermarkConfig.Position pos, int h, int cH, int pad) {
         switch (pos) {
-            case BOTTOM_LEFT: case BOTTOM_RIGHT: return cH - h - pad;
-            case CENTER: return (cH - h) / 2f;
-            default: return pad;
+            case BOTTOM_LEFT:
+            case BOTTOM_RIGHT:
+                return cH - h - pad;
+            case CENTER:
+                return (cH - h) / 2f;
+            default:
+                return pad;
         }
     }
 
     private float calcTextY(WatermarkConfig.Position pos, int fs, int cH, int pad, int extraY) {
         switch (pos) {
-            case BOTTOM_LEFT: case BOTTOM_RIGHT: return cH - pad + extraY;
-            case CENTER: return cH / 2f + fs / 2f + extraY;
-            default: return pad + fs + extraY;
+            case BOTTOM_LEFT:
+            case BOTTOM_RIGHT:
+                return cH - pad + extraY;
+            case CENTER:
+                return cH / 2f + fs / 2f + extraY;
+            default:
+                return pad + fs + extraY;
         }
     }
 
@@ -1863,5 +1930,9 @@ public class VideoProcessorMediaCodec {
         File dir = new File(context.getExternalFilesDir(null), "CopyrightFree");
         if (!dir.exists()) dir.mkdirs();
         return new File(dir, "CF_" + ts + ".mp4").getAbsolutePath();
+    }
+
+    private boolean shouldPassthroughAudio(TransformSettings ts, boolean faceAudioMixNeeded) {
+        return !needsAudioProcessing(ts, faceAudioMixNeeded);
     }
 }
