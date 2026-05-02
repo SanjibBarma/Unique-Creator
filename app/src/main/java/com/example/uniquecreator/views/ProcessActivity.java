@@ -40,6 +40,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import com.example.uniquecreator.BaseActivity;
 import com.example.uniquecreator.R;
 import com.example.uniquecreator.helper.PermissionHelper;
 import com.example.uniquecreator.helper.TransformSettings;
@@ -52,7 +53,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Locale;
 
-public class ProcessActivity extends AppCompatActivity {
+public class ProcessActivity extends BaseActivity {
 
     private static final String TAG = "ProcessActivity";
 
@@ -117,6 +118,11 @@ public class ProcessActivity extends AppCompatActivity {
     private Handler seekHandler;
     private Runnable seekRunnable;
     private boolean isPlaying = false;
+
+    @Override
+    protected SecurityCheckMode getSecurityCheckMode() {
+        return SecurityCheckMode.ALWAYS;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

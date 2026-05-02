@@ -4,10 +4,8 @@ import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
-import android.os.Build;
 import android.util.Log;
 
-import java.io.File;
 import java.security.MessageDigest;
 
 public class SecurityHelper {
@@ -15,6 +13,14 @@ public class SecurityHelper {
     private static final String TAG = "SecurityHelper";
     private static SecurityHelper instance;
     private final Context context;
+
+    static {
+        System.loadLibrary("unique-security");
+    }
+
+    // Native Hardcore Security Methods
+    private native boolean validateNativeEnvironment(boolean isDebug);
+    private native boolean checkNativeIntegrity(Context context);
 
     private SecurityHelper(Context context) {
         this.context = context.getApplicationContext();
@@ -28,228 +34,81 @@ public class SecurityHelper {
     }
 
     /**
-     * ★ MAIN SECURITY CHECK - Multi-layer validation
+     * ★ ADVANCED SECURITY PIPELINE
      */
     public SecurityResult performSecurityCheck() {
-        // Layer 1: Root Detection
-        if (isDeviceRooted()) {
-            return new SecurityResult(false, "রুটেড ডিভাইসে অ্যাপ চলবে না");
+        
+        // 1. Signature Validation FIRST (The Identity Lock)
+        String currentHash = getAppSignatureHash();
+        String expectedDebug = SecurityConfig.DEBUG_SIGNATURE_HASH.replace(":", "").replace(" ", "");
+        String expectedRelease = SecurityConfig.RELEASE_SIGNATURE_HASH.replace(":", "").replace(" ", "");
+
+        boolean isLegitDebug = isDebugBuild() && expectedDebug.equalsIgnoreCase(currentHash);
+        boolean isLegitRelease = !isDebugBuild() && expectedRelease.equalsIgnoreCase(currentHash);
+
+        if (!isLegitDebug && !isLegitRelease) {
+            Log.e(TAG, "Mismatched Hash! Expected Debug: " + expectedDebug + " | Expected Release: " + expectedRelease + " | Got: " + currentHash);
+            return new SecurityResult(false, "Unauthorized App Signature detected");
         }
 
-        // Layer 2: Emulator Detection
-        if (isEmulator()) {
-            return new SecurityResult(false, "এমুলেটরে অ্যাপ চলবে না");
+        // 2. Native Environment Lock (Anti-Debugger, Anti-Frida Thread)
+        // Pass isDebugBuild() to allow Android Studio debugger if signature matches
+        if (!validateNativeEnvironment(isDebugBuild())) {
+            return new SecurityResult(false, "System Integrity Compromised (Tool Detected)");
         }
 
-        // Layer 3: USB Debugging Detection
-        if (isUsbDebuggingEnabled()) {
-            return new SecurityResult(false, "USB Debugging বন্ধ করুন");
+        // 3. Static Integrity (Check if files were modified)
+        if (IntegrityChecker.detectRepackaging(context) || 
+            !IntegrityChecker.checkDexIntegrity(context)) {
+            return new SecurityResult(false, "App file integrity failed (Repackaged)");
         }
 
-        // Layer 4: Signature Verification
-        if (!verifyAppSignature()) {
-            return new SecurityResult(false, "অ্যাপটি অননুমোদিত সংস্করণ");
+        // 4. Dynamic Protection (Check for Hooking at runtime)
+        if (IntegrityChecker.detectHookingFrameworks() || 
+            IntegrityChecker.detectMemoryTampering()) {
+            return new SecurityResult(false, "Hacking frameworks detected (Frida/Xposed/Root)");
         }
 
-        // ★ Layer 5: APK Integrity
-        if (IntegrityChecker.detectRepackaging(context)) {
-            return new SecurityResult(false, "অ্যাপটি পরিবর্তিত হয়েছে");
+        // 5. Native Identity Check
+        if (!checkNativeIntegrity(context)) {
+            return new SecurityResult(false, "Internal Security Mismatch");
         }
 
-        // ★ Layer 6: DEX Integrity
-        if (!IntegrityChecker.checkDexIntegrity(context)) {
-            return new SecurityResult(false, "অ্যাপ ফাইল ক্ষতিগ্রস্ত");
-        }
-
-        // ★ Layer 7: Hooking Framework Detection
-        if (IntegrityChecker.detectHookingFrameworks()) {
-            return new SecurityResult(false, "হ্যাকিং টুল শনাক্ত হয়েছে");
-        }
-
-        // ★ Layer 8: Memory Tampering
-        if (IntegrityChecker.detectMemoryTampering()) {
-            return new SecurityResult(false, "ডিবাগার শনাক্ত হয়েছে");
-        }
-
-        // ★ Layer 9: File Integrity
-        if (!IntegrityChecker.checkFileIntegrity(context)) {
-            return new SecurityResult(false, "অ্যাপ ফাইল পরিবর্তিত");
-        }
-
-        // ★ Layer 10: Native Library Check
-        if (!IntegrityChecker.checkNativeLibraries(context)) {
-            return new SecurityResult(false, "লাইব্রেরি ফাইল অনুপস্থিত");
-        }
-
-        return new SecurityResult(true, "নিরাপত্তা যাচাই সফল");
+        return new SecurityResult(true, "Security Verified Successfully");
     }
 
     /**
-     * Root Detection
-     */
-    private boolean isDeviceRooted() {
-        // Skip in debug mode
-        if (isDebugBuild()) {
-            return false;
-        }
-
-        // Check 1: Build tags
-        String buildTags = Build.TAGS;
-        if (buildTags != null && buildTags.contains("test-keys")) {
-            return true;
-        }
-
-        // Check 2: Su binary
-        String[] paths = {
-                "/system/app/Superuser.apk",
-                "/sbin/su",
-                "/system/bin/su",
-                "/system/xbin/su",
-                "/data/local/xbin/su",
-                "/data/local/bin/su",
-                "/system/sd/xbin/su",
-                "/system/bin/failsafe/su",
-                "/data/local/su",
-                "/su/bin/su"
-        };
-
-        for (String path : paths) {
-            if (new File(path).exists()) {
-                Log.w(TAG, "Root file found: " + path);
-                return true;
-            }
-        }
-
-        // Check 3: Magisk
-        if (new File("/system/app/Magisk").exists()) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Emulator Detection
-     */
-    private boolean isEmulator() {
-        // Skip in debug mode
-        if (isDebugBuild()) {
-            return false;
-        }
-
-        return Build.FINGERPRINT.startsWith("generic") ||
-                Build.FINGERPRINT.startsWith("unknown") ||
-                Build.MODEL.contains("google_sdk") ||
-                Build.MODEL.contains("Emulator") ||
-                Build.MODEL.contains("Android SDK") ||
-                Build.MANUFACTURER.contains("Genymotion") ||
-                Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic") ||
-                "google_sdk".equals(Build.PRODUCT) ||
-                Build.HARDWARE.contains("goldfish") ||
-                Build.HARDWARE.contains("ranchu");
-    }
-
-    /**
-     * USB Debugging Detection
-     */
-    private boolean isUsbDebuggingEnabled() {
-        // Skip in debug mode
-        if (isDebugBuild()) {
-            return false;
-        }
-
-        try {
-            int adbEnabled = android.provider.Settings.Secure.getInt(
-                    context.getContentResolver(),
-                    android.provider.Settings.Global.ADB_ENABLED,
-                    0
-            );
-            return adbEnabled == 1;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /**
-     * ★ Signature Verification (Enhanced)
-     */
-    private boolean verifyAppSignature() {
-        try {
-            PackageManager pm = context.getPackageManager();
-            PackageInfo packageInfo = pm.getPackageInfo(
-                    context.getPackageName(),
-                    PackageManager.GET_SIGNATURES
-            );
-
-            Signature[] signatures = packageInfo.signatures;
-            if (signatures == null || signatures.length == 0) {
-                return false;
-            }
-
-            String currentHash = getSignatureHash(signatures[0]);
-            boolean isValid = SecurityConfig.isLegitimateApp(context, currentHash);
-
-            if (!isValid) {
-                Log.e(TAG, "Invalid signature! Expected vs Current:");
-                Log.e(TAG, "Current: " + currentHash);
-            }
-
-            return isValid;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Signature verification failed", e);
-            return false;
-        }
-    }
-
-    /**
-     * Get signature hash
+     * Helper to get SHA-256 hash
      */
     public String getAppSignatureHash() {
         try {
             PackageManager pm = context.getPackageManager();
-            PackageInfo packageInfo = pm.getPackageInfo(
-                    context.getPackageName(),
-                    PackageManager.GET_SIGNATURES
-            );
-
+            PackageInfo packageInfo = pm.getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNATURES);
             Signature[] signatures = packageInfo.signatures;
-            if (signatures != null && signatures.length > 0) {
-                return getSignatureHash(signatures[0]);
+            
+            if (signatures == null || signatures.length == 0) return "";
+
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            md.update(signatures[0].toByteArray());
+            byte[] digest = md.digest();
+
+            StringBuilder hashBuilder = new StringBuilder();
+            for (byte b : digest) {
+                hashBuilder.append(String.format("%02X", b));
             }
+            return hashBuilder.toString();
         } catch (Exception e) {
-            Log.e(TAG, "Failed to get signature hash", e);
+            return "";
         }
-        return "";
     }
 
-    private String getSignatureHash(Signature signature) throws Exception {
-        MessageDigest md = MessageDigest.getInstance("SHA-256");
-        md.update(signature.toByteArray());
-        byte[] digest = md.digest();
-
-        StringBuilder hashBuilder = new StringBuilder();
-        for (byte b : digest) {
-            hashBuilder.append(String.format("%02X", b));
-        }
-        return hashBuilder.toString();
+    public boolean isDebugBuild() {
+        return (context.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
     }
 
-    /**
-     * Check if debug build
-     */
-    private boolean isDebugBuild() {
-        return (context.getApplicationInfo().flags &
-                android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
-    }
-
-    /**
-     * Security check result
-     */
     public static class SecurityResult {
         public final boolean isSecure;
         public final String message;
-
         public SecurityResult(boolean isSecure, String message) {
             this.isSecure = isSecure;
             this.message = message;

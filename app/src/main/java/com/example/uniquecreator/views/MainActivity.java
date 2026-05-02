@@ -33,6 +33,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.content.ContextCompat;
 
+import com.example.uniquecreator.BaseActivity;
 import com.example.uniquecreator.R;
 import com.example.uniquecreator.helper.PermissionHelper;
 import com.example.uniquecreator.helper.SharedPrefHelper;
@@ -45,7 +46,7 @@ import java.io.InputStream;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseActivity {
 
     private static final String TAG = "MainActivity";
     private static final int MAX_LOGO_SIZE = 512;
@@ -196,6 +197,11 @@ public class MainActivity extends AppCompatActivity {
 
     // Launcher
     private ActivityResultLauncher<Intent> faceVideoPickerLauncher;
+
+    @Override
+    protected SecurityCheckMode getSecurityCheckMode() {
+        return SecurityCheckMode.ALWAYS;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

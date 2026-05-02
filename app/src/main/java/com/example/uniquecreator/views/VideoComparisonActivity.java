@@ -19,6 +19,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.uniquecreator.BaseActivity;
 import com.example.uniquecreator.R;
 import com.example.uniquecreator.helper.PermissionHelper;
 
@@ -26,7 +27,7 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.util.Locale;
 
-public class VideoComparisonActivity extends AppCompatActivity {
+public class VideoComparisonActivity extends BaseActivity {
 
     private static final String TAG = "VideoComparison";
 
@@ -47,6 +48,11 @@ public class VideoComparisonActivity extends AppCompatActivity {
 
     // ★ FIX: Track which picker is active (no longer needed with separate launchers)
     private Bitmap originalThumbnail, processedThumbnail;
+
+    @Override
+    protected SecurityCheckMode getSecurityCheckMode() {
+        return SecurityCheckMode.ALWAYS;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

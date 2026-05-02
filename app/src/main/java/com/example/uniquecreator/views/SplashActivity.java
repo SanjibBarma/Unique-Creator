@@ -43,10 +43,6 @@ import com.example.uniquecreator.model.ApiRequest;
 import com.example.uniquecreator.security.SecurityHelper;
 import com.example.uniquecreator.viewModel.UserCheckViewModel;
 
-/**
- * Splash Screen Activity
- * Animated loading screen with logo animations and progress indicator
- */
 public class SplashActivity extends BaseActivity {
 
     private static final long SPLASH_DURATION = 3000;
@@ -77,7 +73,7 @@ public class SplashActivity extends BaseActivity {
 
     @Override
     protected SecurityCheckMode getSecurityCheckMode() {
-        return SecurityCheckMode.SKIP;
+        return SecurityCheckMode.ALWAYS;
     }
 
     @Override
