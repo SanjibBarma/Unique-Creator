@@ -24,4 +24,11 @@
     <color name="success">#4CAF50</color>
     <color name="error">#FF5252</color>
     <color name="warning">#FFC107</color>
+
+    <!-- UI Component Colors (Added for Compatibility) -->
+    <color name="colorAccent1">#7C5CFC</color>
+    <color name="colorAccent1_transparent">#407C5CFC</color>
+    <color name="divider_color">#2A2A3A</color>
+    <color name="switch_thumb">#FFFFFF</color>
+    <color name="switch_track">#4D7C5CFC</color>
 </resources>

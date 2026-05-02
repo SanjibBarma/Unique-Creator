@@ -139,7 +139,7 @@
                         android:textSize="12.5sp"
                         android:lineSpacingExtra="4dp"/>
 
-<!--                    &lt;!&ndash; Note &ndash;&gt;-->
+<!-- Note -->
 <!--                    <TextView-->
 <!--                        android:layout_width="match_parent"-->
 <!--                        android:layout_height="wrap_content"-->
@@ -181,7 +181,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
-                        android:text="26+ ট্রান্সফর্মেশন দিয়ে ভিডিও মডিফাই করুন"
+                        android:text="35+ ট্রান্সফর্মেশন দিয়ে ভিডিও মডিফাই করুন"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp"/>
                 </LinearLayout>

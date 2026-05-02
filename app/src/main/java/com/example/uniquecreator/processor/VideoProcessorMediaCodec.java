@@ -100,7 +100,20 @@ public class VideoProcessorMediaCodec {
         callback.onProgress(0, "ভিডিও বিশ্লেষণ...");
 
         MediaExtractor extractor = new MediaExtractor();
-        extractor.setDataSource(context, inputUri, null);
+        android.content.res.AssetFileDescriptor afd = null;
+        try {
+            afd = context.getContentResolver().openAssetFileDescriptor(inputUri, "r");
+            if (afd != null) {
+                extractor.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+            } else {
+                extractor.setDataSource(context, inputUri, null);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "AFD fallback, trying direct URI", e);
+            extractor.setDataSource(context, inputUri, null);
+        } finally {
+            if (afd != null) try { afd.close(); } catch (Exception ignored) {}
+        }
 
         int videoTrackIndex = -1;
         int audioTrackIndex = -1;
@@ -192,10 +205,10 @@ public class VideoProcessorMediaCodec {
             switch (aspectRatio) {
                 case "16:9": targetRatio = 16f / 9f; break;
                 case "9:16": targetRatio = 9f / 16f; break;
-                case "1:1": targetRatio = 1f; break;
+                case "1:1": targetRatio = 1.0f; break;
                 case "4:3": targetRatio = 4f / 3f; break;
-                case "4:5": targetRatio = 4f / 5f; break;
-                case "3:4": targetRatio = 3f / 4f; break;
+                case "4:5": targetRatio = 0.8f; break;
+                case "3:4": targetRatio = 0.75f; break;
                 default: targetRatio = inputRatio; break;
             }
         }
@@ -221,11 +234,22 @@ public class VideoProcessorMediaCodec {
 
         if (!"original".equals(resolution)) {
             try {
-                int targetHeight = Integer.parseInt(resolution);
-                if (outputHeight > targetHeight) {
-                    float scale = (float) targetHeight / outputHeight;
-                    outputWidth = Math.round(outputWidth * scale);
-                    outputHeight = targetHeight;
+                int targetRes = Integer.parseInt(resolution);
+                // Orientation-aware resolution:
+                // In Portrait (H > W), target the width (e.g. 1080p -> 1080x1920)
+                // In Landscape (W >= H), target the height (e.g. 1080p -> 1920x1080)
+                if (inputHeight > inputWidth) {
+                    if (outputWidth != targetRes) {
+                        float scale = (float) targetRes / outputWidth;
+                        outputWidth = targetRes;
+                        outputHeight = Math.round(outputHeight * scale);
+                    }
+                } else {
+                    if (outputHeight != targetRes) {
+                        float scale = (float) targetRes / outputHeight;
+                        outputHeight = targetRes;
+                        outputWidth = Math.round(outputWidth * scale);
+                    }
                 }
             } catch (Exception ignored) {}
         }
@@ -237,11 +261,18 @@ public class VideoProcessorMediaCodec {
         final int FINAL_HEIGHT = outputHeight;
 
         float cropOffsetX = 0f, cropOffsetY = 0f, cropScaleX = 1f, cropScaleY = 1f;
-        if (croppedWidth != inputWidth || croppedHeight != inputHeight) {
+        // অরিজিনাল মুডে যাতে কোনোভাবেই ক্রপ না হয় তা নিশ্চিত করা
+        if (!"original".equals(aspectRatio) && (croppedWidth != inputWidth || croppedHeight != inputHeight)) {
             cropScaleX = (float) croppedWidth / inputWidth;
             cropScaleY = (float) croppedHeight / inputHeight;
             cropOffsetX = (1f - cropScaleX) / 2f;
             cropOffsetY = (1f - cropScaleY) / 2f;
+        } else {
+            // Original ratio এর জন্য সব সময় ফুল স্ক্রিন
+            cropScaleX = 1f;
+            cropScaleY = 1f;
+            cropOffsetX = 0f;
+            cropOffsetY = 0f;
         }
 
         final float CROP_OFFSET_X = cropOffsetX;
@@ -434,7 +465,7 @@ public class VideoProcessorMediaCodec {
         final Uri FACE_URI = faceUri;
         final int FACE_AUDIO_TRACK_INDEX = faceAudioTrackIndex;
         final MediaFormat FACE_AUDIO_FORMAT = faceAudioFormat;
-        final boolean FACE_HAS_AUDIO = (faceAudioTrackIndex >= 0 && faceAudioFormat != null);
+        final boolean FACE_HAS_AUDIO = (faceAudioTrackIndex >= 0 && faceAudioFormat != null && ts.reactionFaceAudioEnabled);
 
         // Re-check audio processing need with face audio info
         final boolean NEEDS_AUDIO_PROCESSING = hasAudio && needsAudioProcessing(ts, FACE_HAS_AUDIO);
@@ -552,6 +583,36 @@ public class VideoProcessorMediaCodec {
         Matrix.setIdentityM(mvpMatrix, 0);
         if (ts.flipEnabled) Matrix.scaleM(mvpMatrix, 0, -1f, 1f, 1f);
 
+        // Apply 3D Perspective Warp (Version 7.0)
+        if (ts.perspective3DEnabled) {
+            float aspect = (float) FINAL_WIDTH / FINAL_HEIGHT;
+            float[] projection = new float[16];
+            Matrix.perspectiveM(projection, 0, 45f, aspect, 0.1f, 100f);
+            float[] view = new float[16];
+            // Correct eyeZ for 45 deg FOV is ~2.4142f to avoid shrinking
+            Matrix.setLookAtM(view, 0, 0f, 0f, 2.41421356f, 0f, 0f, 0f, 0f, 1f, 0f);
+            float[] model = new float[16];
+            Matrix.setIdentityM(model, 0);
+            // Scale quad to match aspect ratio before rotation to fill the view
+            Matrix.scaleM(model, 0, aspect, 1.0f, 1.0f);
+            Matrix.rotateM(model, 0, ts.perspectiveTiltX, 0f, 1f, 0f); // X-Tilt
+            Matrix.rotateM(model, 0, ts.perspectiveTiltY, 1f, 0f, 0f); // Y-Tilt
+
+            float[] mvp3d = new float[16];
+            float[] temp = new float[16];
+            Matrix.multiplyMM(temp, 0, view, 0, model, 0);
+            Matrix.multiplyMM(mvp3d, 0, projection, 0, temp, 0);
+
+            float[] combined = new float[16];
+            Matrix.multiplyMM(combined, 0, mvp3d, 0, mvpMatrix, 0);
+            System.arraycopy(combined, 0, mvpMatrix, 0, 16);
+        }
+
+        // Apply Aspect Distortion (Subtle Stretch)
+        if (ts.aspectDistortionEnabled) {
+            Matrix.scaleM(mvpMatrix, 0, ts.aspectDistortionX, ts.aspectDistortionY, 1.0f);
+        }
+
         float[] stMatrix = new float[16];
         Matrix.setIdentityM(stMatrix, 0);
 
@@ -593,6 +654,8 @@ public class VideoProcessorMediaCodec {
         long frameIntervalUs = 1_000_000L / frameRate;
         long lastPts = -1L;
         long videoFirstPts = -1L;
+        long lastInputPtsProcessed = 0L;
+        int frameCounter = 0;
         long lastProgressUpdate = System.currentTimeMillis();
 
         boolean pendingDuplicate = false;
@@ -670,8 +733,24 @@ public class VideoProcessorMediaCodec {
 
                             long rawPts = decoderInfo.presentationTimeUs;
                             if (videoFirstPts < 0) videoFirstPts = rawPts;
-                            long outputPts = (long) ((rawPts - videoFirstPts) / speedFactor);
-                            if (lastPts >= 0 && outputPts <= lastPts) outputPts = lastPts + frameIntervalUs;
+                            
+                            // 32. Temporal Variable Speed (VFR Oscillation)
+                            float currentSpeed = speedFactor;
+                            if (ts.variableSpeedEnabled) {
+                                float elapsedSec = (rawPts - videoFirstPts) / 1_000_000.0f;
+                                float wave = (float) Math.sin(elapsedSec * 2.0);
+                                currentSpeed *= (1.0f + wave * (ts.variableSpeedIntensity / 100.0f));
+                            }
+                            
+                            // Accurate cumulative output PTS to maintain 100% sync
+                            long outputPts;
+                            if (lastPts < 0) {
+                                outputPts = 0;
+                            } else {
+                                long inputDelta = rawPts - (videoFirstPts + lastInputPtsProcessed);
+                                outputPts = lastPts + (long)(inputDelta / currentSpeed);
+                            }
+                            lastInputPtsProcessed = rawPts - videoFirstPts;
 
                             if (useFaceVideo && FACE_DECODER != null && FACE_SURFACE_TEXTURE != null && !faceOutputDoneHolder[0]) {
                                 currentFacePts = advanceFaceVideoToTime(
@@ -743,9 +822,10 @@ public class VideoProcessorMediaCodec {
                                     // INIT_WEIGHT(3%) already sent, now video portion
                                     int pct = (int) (INIT_WEIGHT * 100 + VIDEO_WEIGHT * 100 * videoRatio);
                                     pct = Math.max(3, Math.min(pct, (int) ((INIT_WEIGHT + VIDEO_WEIGHT) * 100)));
-                                    callback.onProgress(pct, "ফ্রেম: " + frameCount);
+                                    callback.onProgress(pct, "ফ্রেম: " + frameCounter);
                                     lastProgressUpdate = System.currentTimeMillis();
                                 }
+                                frameCounter++;
                             }
                         }
                     }
@@ -859,6 +939,11 @@ public class VideoProcessorMediaCodec {
         if (!finalFile.exists() || finalFile.length() < 1000) {
             callback.onError("ফাইল তৈরি হয়নি");
             return;
+        }
+
+        // Apply Advanced Bypass (Metadata + Junk Data)
+        if (ts.metadataScrubbingEnabled || ts.junkDataEnabled) {
+            applyAdvancedBypass(finalFile, ts);
         }
 
         callback.onProgress(100, "✓ সম্পন্ন!");
@@ -1020,15 +1105,14 @@ public class VideoProcessorMediaCodec {
             boolean faceInputDone = false;
             boolean faceDecodeDone = false;
 
-            long firstPts = -1L, lastOutputPts = -1L;
-            int processedSamples = 0;
+            long totalSamplesEncoded = 0;
+            int audioFrameCounter = 0;
             long lastAudioProgress = System.currentTimeMillis();
 
             short[] pendingFaceSamples = null;
             int faceBufferReadPos = 0;
 
             while (!encodeDone && !isCancelled) {
-
                 if (!inputDone) {
                     int inIdx = audioDecoder.dequeueInputBuffer(TIMEOUT_US);
                     if (inIdx >= 0) {
@@ -1107,20 +1191,20 @@ public class VideoProcessorMediaCodec {
                             short[] samples = new short[sb.remaining()];
                             sb.get(samples);
 
+                            // Apply main volume
                             for (int i = 0; i < samples.length; i++) {
                                 float s = samples[i] * mainVolume;
                                 samples[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) s));
                             }
 
+                            // Mix face audio
                             if (useFaceAudio && pendingFaceSamples != null) {
                                 int available = pendingFaceSamples.length - faceBufferReadPos;
                                 int toMix = Math.min(samples.length, available);
 
                                 for (int i = 0; i < toMix; i++) {
                                     float mixed = samples[i] + pendingFaceSamples[faceBufferReadPos + i] * faceVolume;
-                                    if (mixed > Short.MAX_VALUE) mixed = Short.MAX_VALUE;
-                                    if (mixed < Short.MIN_VALUE) mixed = Short.MIN_VALUE;
-                                    samples[i] = (short) mixed;
+                                    samples[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) mixed));
                                 }
 
                                 faceBufferReadPos += toMix;
@@ -1130,6 +1214,26 @@ public class VideoProcessorMediaCodec {
                                 }
                             }
 
+                            // Apply speed/resampling for sync
+                            float audioEffectiveSpeed = speedFactor;
+
+                            if (Math.abs(audioEffectiveSpeed - 1f) > 0.001f) {
+                                samples = resampleAudio(samples, audioEffectiveSpeed, channelCount);
+                            }
+
+                            // Apply Advanced EQ
+                            if (ts.audioEqEnabled) {
+                                samples = applyAudioEQ(samples, ts.audioEqBass, ts.audioEqTreble, sampleRate);
+                            }
+
+                            // 34. Audio Phase Shifting
+                            if (ts.audioPhaseShiftEnabled) {
+                                for (int i = 0; i < samples.length; i++) {
+                                    samples[i] = (short) (-samples[i]);
+                                }
+                            }
+
+                            // Apply effects
                             if (ts.pitchEnabled && Math.abs(ts.pitch - 1f) > 0.005f) {
                                 samples = applyPitchToSamples(samples, ts.pitch, channelCount);
                             }
@@ -1140,15 +1244,7 @@ public class VideoProcessorMediaCodec {
                                 samples = applyAmbientNoise(samples, ts.ambientNoiseLevel);
                             }
 
-                            long pts = decInfo.presentationTimeUs;
-                            if (firstPts < 0) firstPts = pts;
-                            long outPts = (long) ((pts - firstPts) / speedFactor);
-                            if (outPts < 0) outPts = 0;
-
-                            if (maxDurationUs <= 0 || outPts < maxDurationUs) {
-                                if (lastOutputPts >= 0 && outPts <= lastOutputPts) outPts = lastOutputPts + 1;
-                                lastOutputPts = outPts;
-
+                            if (samples.length > 0) {
                                 int inIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
                                 if (inIdx >= 0) {
                                     ByteBuffer inBuf = audioEncoder.getInputBuffer(inIdx);
@@ -1158,8 +1254,24 @@ public class VideoProcessorMediaCodec {
                                         pcm.asShortBuffer().put(samples);
                                         int writeLen = Math.min(pcm.array().length, inBuf.capacity());
                                         inBuf.put(pcm.array(), 0, writeLen);
+                                        
+                                        long outPts = (totalSamplesEncoded * 1_000_000L) / (sampleRate * channelCount);
                                         audioEncoder.queueInputBuffer(inIdx, 0, writeLen, outPts, 0);
-                                        processedSamples++;
+                                        totalSamplesEncoded += (writeLen / 2);
+                                        audioFrameCounter++;
+
+                                        if (audioFrameCounter % 20 == 0 || System.currentTimeMillis() - lastAudioProgress > 400) {
+                                            double audioRatio = (maxDurationUs > 0) ? (double) outPts / maxDurationUs : 0.0;
+                                            audioRatio = Math.max(0.0, Math.min(1.0, audioRatio));
+
+                                            int audioPct = (int) ((initWeight + videoWeight) * 100 + audioWeight * 100 * audioRatio);
+                                            int maxAudioPct = (int) ((initWeight + videoWeight + audioWeight) * 100);
+                                            audioPct = Math.max((int) ((initWeight + videoWeight) * 100), Math.min(audioPct, maxAudioPct));
+                                            
+                            callback.onProgress(audioPct, "অডিও:" + audioFrameCounter);
+                            audioFrameCounter++;
+                                            lastAudioProgress = System.currentTimeMillis();
+                                        }
                                     }
                                 }
                             }
@@ -1173,21 +1285,6 @@ public class VideoProcessorMediaCodec {
                             if (eosIdx >= 0) {
                                 audioEncoder.queueInputBuffer(eosIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                             }
-                        }
-
-                        // === SYNCED AUDIO PROGRESS ===
-                        if (System.currentTimeMillis() - lastAudioProgress > 400) {
-                            double audioRatio = 0.0;
-                            if (maxDurationUs > 0 && lastOutputPts > 0) {
-                                audioRatio = (double) lastOutputPts / maxDurationUs;
-                            }
-                            audioRatio = Math.max(0.0, Math.min(1.0, audioRatio));
-
-                            int audioPct = (int) ((initWeight + videoWeight) * 100 + audioWeight * 100 * audioRatio);
-                            int maxAudioPct = (int) ((initWeight + videoWeight + audioWeight) * 100);
-                            audioPct = Math.max((int) ((initWeight + videoWeight) * 100), Math.min(audioPct, maxAudioPct));
-                            callback.onProgress(audioPct, "অডিও: " + processedSamples);
-                            lastAudioProgress = System.currentTimeMillis();
                         }
                     }
                 }
@@ -1545,6 +1642,13 @@ public class VideoProcessorMediaCodec {
         fs.append("void main(){");
         fs.append("vec2 uv=vTextureCoord;");
 
+        // 1. Sub-pixel Jitter (Micro-shake) - Version 7.0
+        if (ts.subPixelJitterEnabled) {
+            fs.append("float jitterX = sin(uCurrentTime * 15.0) * ").append(ts.jitterStrength / 10000.0f).append(";");
+            fs.append("float jitterY = cos(uCurrentTime * 17.0) * ").append(ts.jitterStrength / 10000.0f).append(";");
+            fs.append("uv += vec2(jitterX, jitterY);");
+        }
+
         boolean needsCrop = (cropScaleX < 0.999f || cropScaleY < 0.999f);
         if (needsCrop) {
             fs.append("uv=uv*vec2(").append(String.format(Locale.US, "%.6f", cropScaleX))
@@ -1554,6 +1658,9 @@ public class VideoProcessorMediaCodec {
         }
 
         if (ts.barrelEnabled && ts.barrel > 0.01f) {
+            // Auto-zoom to compensate for barrel distortion black edges
+            float autoZoom = 1.0f + (ts.barrel * 0.25f);
+            fs.append("uv = (uv - 0.5) / ").append(autoZoom).append(" + 0.5;");
             fs.append("{vec2 p=uv-0.5; float r2=dot(p,p); p*=(1.0+").append(ts.barrel).append("*r2); uv=p+0.5;");
             fs.append("if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){gl_FragColor=vec4(0.0,0.0,0.0,1.0); return;}}");
         }
@@ -1617,6 +1724,12 @@ public class VideoProcessorMediaCodec {
 
         if (ts.brightEnabled && Math.abs(ts.bright - 1f) > 0.001f) {
             fs.append("color.rgb*=").append(ts.bright).append(";");
+        }
+
+        // 33. Dynamic Luma Pulse (Ultimate Bypass)
+        if (ts.lumaPulseEnabled) {
+            fs.append("float pulse = 1.0 + sin(uCurrentTime * 10.0) * ").append(ts.lumaPulseIntensity / 1000.0f).append(";");
+            fs.append("color.rgb *= pulse;");
         }
         if (ts.satEnabled && Math.abs(ts.saturation - 1f) > 0.001f) {
             fs.append("float lum=dot(color.rgb,vec3(0.2126,0.7152,0.0722));");
@@ -1770,6 +1883,41 @@ public class VideoProcessorMediaCodec {
         return shader;
     }
 
+    private short[] applyAudioEQ(short[] samples, float bassGain, float trebleGain, int sampleRate) {
+        short[] output = new short[samples.length];
+        
+        // Simple IIR filters for Bass (Low-shelf) and Treble (High-shelf)
+        float dt = 1.0f / sampleRate;
+        float bassRC = 1.0f / (2.0f * (float) Math.PI * 250.0f); // 250Hz shelf
+        float bassAlpha = dt / (bassRC + dt);
+        
+        float trebleRC = 1.0f / (2.0f * (float) Math.PI * 4000.0f); // 4kHz shelf
+        float trebleAlpha = trebleRC / (trebleRC + dt);
+        
+        float lastLow = 0;
+        float lastHigh = 0;
+        float lastInput = 0;
+
+        for (int i = 0; i < samples.length; i++) {
+            float in = samples[i];
+            
+            // Bass boost/cut
+            float low = lastLow + bassAlpha * (in - lastLow);
+            lastLow = low;
+            float bassComponent = low * (bassGain - 1.0f);
+            
+            // Treble boost/cut
+            float high = trebleAlpha * (lastHigh + in - lastInput);
+            lastInput = in;
+            lastHigh = high;
+            float trebleComponent = high * (trebleGain - 1.0f);
+            
+            float out = in + bassComponent + trebleComponent;
+            output[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) out));
+        }
+        return output;
+    }
+
     private short[] applySpectralNoise(short[] samples, float noiseLevel, int sampleRate) {
         short[] output = new short[samples.length];
         float alpha = (float) (2.0 * Math.PI * 6000.0 / sampleRate);
@@ -1821,6 +1969,39 @@ public class VideoProcessorMediaCodec {
             }
             pos += step;
             if (pos >= inFrames - 1) break;
+        }
+        return output;
+    }
+
+    private short[] resampleAudio(short[] input, float speedFactor, int channels) {
+        if (Math.abs(speedFactor - 1f) < 0.001f) return input;
+        int inFrames = input.length / channels;
+        // Calculate output frames more precisely
+        int outFrames = (int) Math.round(inFrames / speedFactor);
+        if (outFrames <= 0) return new short[0];
+
+        short[] output = new short[outFrames * channels];
+        // Calculate a precise step to cover the entire input range
+        double step = (double)(inFrames - 1) / (outFrames > 1 ? outFrames - 1 : 1);
+        double pos = 0.0;
+        
+        for (int outF = 0; outF < outFrames; outF++) {
+            int i0 = (int) pos;
+            int i1 = Math.min(i0 + 1, inFrames - 1);
+            float frac = (float)(pos - i0);
+            
+            for (int ch = 0; ch < channels; ch++) {
+                int idx0 = i0 * channels + ch;
+                int idx1 = i1 * channels + ch;
+                
+                // Safety check for array bounds
+                if (idx0 < input.length && idx1 < input.length) {
+                    short s0 = input[idx0];
+                    short s1 = input[idx1];
+                    output[outF * channels + ch] = (short) (s0 + frac * (s1 - s0));
+                }
+            }
+            pos += step;
         }
         return output;
     }
@@ -1913,6 +2094,53 @@ public class VideoProcessorMediaCodec {
         }
     }
 
+    private void applyAdvancedBypass(File file, TransformSettings ts) {
+        if (file == null || !file.exists()) return;
+
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "rw")) {
+            // 1. Metadata Scrubbing (Atom level cleaning)
+            if (ts.metadataScrubbingEnabled) {
+                long fileLength = raf.length();
+                byte[] buffer = new byte[8];
+                long pos = 0;
+
+                // Simple MP4 atom crawler to find and blank out common metadata atoms
+                while (pos < fileLength - 8) {
+                    raf.seek(pos);
+                    int read = raf.read(buffer);
+                    if (read < 8) break;
+
+                    long atomSize = ((long) (buffer[0] & 0xFF) << 24) |
+                                    ((long) (buffer[1] & 0xFF) << 16) |
+                                    ((long) (buffer[2] & 0xFF) << 8)  |
+                                    ((long) (buffer[3] & 0xFF));
+                    String atomType = new String(buffer, 4, 4);
+
+                    if (atomSize < 8) break;
+
+                    // Blank out metadata atoms like 'udta', 'meta', '©day', etc.
+                    if (atomType.equals("udta") || atomType.equals("meta") || atomType.equals("free")) {
+                        raf.seek(pos + 4);
+                        raf.write(new byte[]{0, 0, 0, 0}); // Corrupt the type so it's ignored
+                    }
+
+                    pos += atomSize;
+                }
+            }
+
+            // 2. Junk Data Injection (Append random bytes at the end)
+            if (ts.junkDataEnabled) {
+                raf.seek(raf.length());
+                int junkSize = 1024 + random.nextInt(4096); // 1KB to 5KB
+                byte[] junk = new byte[junkSize];
+                random.nextBytes(junk);
+                raf.write(junk);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Advanced bypass failed", e);
+        }
+    }
+
     private int createBitmapTexture(Bitmap bitmap) {
         int[] t = new int[1];
         GLES20.glGenTextures(1, t, 0);
@@ -1936,3 +2164,4 @@ public class VideoProcessorMediaCodec {
         return !needsAudioProcessing(ts, faceAudioMixNeeded);
     }
 }
+

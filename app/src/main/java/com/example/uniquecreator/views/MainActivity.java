@@ -91,14 +91,23 @@ public class MainActivity extends AppCompatActivity {
     // 4 Additional Transform Switches
     private SwitchCompat swSpectralNoise, swTemporalJitter, swAmbientNoise, swBitrateRandom, swBorderProgress;
 
+    // Ultimate Bypass Switches (Version 7.0)
+    private SwitchCompat swPerspective3D, swVariableSpeed, swLumaPulse, swAudioPhaseShift, swSubPixelJitter;
+
+    // Advanced Bypass Switches
+    private SwitchCompat swAspectDistortion, swAudioEq, swMetadataScrubbing, swJunkData;
+
     // Original Transform Sliders
     private Slider slSpeed, slHue, slBright, slSaturation, slZoom;
     private Slider slRotate, slGamma, slNoise, slVignette, slBorder;
     private Slider slTint, slPixelShift, slSharpen, slTrim, slVolume, slBlur, slSepia;
     private Slider slChromatic, slBarrel, slPitch, slBorderProgress;
 
+    // Ultimate Bypass Sliders (Version 7.0)
+    private Slider slPerspectiveTiltX, slPerspectiveTiltY, slVariableSpeedIntensity, slLumaPulseIntensity;
+
     // Additional Sliders
-    private Slider slSpectralNoise, slTemporalJitter, slAmbientNoise, slBitrateRandom;
+    private Slider slSpectralNoise, slTemporalJitter, slAmbientNoise, slBitrateRandom, slSubPixelJitter;
 
     // Slider Value TextViews
     private TextView speedValue, hueValue, brightValue, saturationValue, zoomValue;
@@ -106,6 +115,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView tintValue, pixelShiftValue, sharpenValue, trimValue, volumeValue;
     private TextView blurValue, sepiaValue, chromaticValue, barrelValue, pitchValue;
     private TextView spectralNoiseValue, temporalJitterValue, ambientNoiseValue, bitrateRandomValue, borderProgressValue;
+
+    // Ultimate Bypass Value TextViews (Version 7.0)
+    private TextView perspectiveXTiltValue, perspectiveYTiltValue, variableSpeedValue, lumaPulseValue, subPixelJitterValue;
 
     // Overlay / Watermark
     private ChipGroup overlayModeGroup;
@@ -163,8 +175,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean reactionFaceExpanded = false;
 
     // Reaction Face Controls
-    private SwitchCompat swReactionFace;
-    private LinearLayout faceVideoPickerArea, reactionFaceSection;
+    private SwitchCompat swReactionFace, swFaceAudio;
+    private LinearLayout faceVideoPickerArea, reactionFaceSection, faceAudioSection;
     private FrameLayout faceVideoDropZone;
     private LinearLayout faceVideoInfoLayout;
     private ImageView faceVideoThumbnail;
@@ -386,8 +398,10 @@ public class MainActivity extends AppCompatActivity {
 
 // Reaction Face Controls
         swReactionFace = findViewById(R.id.swReactionFace);
+        swFaceAudio = findViewById(R.id.swFaceAudio);
         faceVideoPickerArea = findViewById(R.id.faceVideoPickerArea);
         reactionFaceSection = findViewById(R.id.reactionFaceSection);
+        faceAudioSection = findViewById(R.id.faceAudioSection);
         faceVideoDropZone = findViewById(R.id.faceVideoDropZone);
         faceVideoInfoLayout = findViewById(R.id.faceVideoInfoLayout);
         faceVideoThumbnail = findViewById(R.id.faceVideoThumbnail);
@@ -440,6 +454,19 @@ public class MainActivity extends AppCompatActivity {
         swAmbientNoise = findViewById(R.id.swAmbientNoise);
         swBitrateRandom = findViewById(R.id.swBitrateRandom);
 
+        // Ultimate Bypass (Version 7.0)
+        swPerspective3D = findViewById(R.id.swPerspective3D);
+        swVariableSpeed = findViewById(R.id.swVariableSpeed);
+        swLumaPulse = findViewById(R.id.swLumaPulse);
+        swAudioPhaseShift = findViewById(R.id.swAudioPhaseShift);
+        swSubPixelJitter = findViewById(R.id.swSubPixelJitter);
+
+        // Advanced Bypass switches
+        swAspectDistortion = findViewById(R.id.swAspectDistortion);
+        swAudioEq = findViewById(R.id.swAudioEq);
+        swMetadataScrubbing = findViewById(R.id.swMetadataScrubbing);
+        swJunkData = findViewById(R.id.swJunkData);
+
         // Original sliders
         slSpeed = findViewById(R.id.slSpeed);
         slHue = findViewById(R.id.slHue);
@@ -469,6 +496,13 @@ public class MainActivity extends AppCompatActivity {
         slAmbientNoise = findViewById(R.id.slAmbientNoise);
         slBitrateRandom = findViewById(R.id.slBitrateRandom);
 
+        // Ultimate Bypass (Version 7.0)
+        slPerspectiveTiltX = findViewById(R.id.slPerspectiveTiltX);
+        slPerspectiveTiltY = findViewById(R.id.slPerspectiveTiltY);
+        slVariableSpeedIntensity = findViewById(R.id.slVariableSpeedIntensity);
+        slLumaPulseIntensity = findViewById(R.id.slLumaPulseIntensity);
+        slSubPixelJitter = findViewById(R.id.slSubPixelJitter);
+
         // Slider value TextViews
         speedValue = findViewById(R.id.speedValue);
         hueValue = findViewById(R.id.hueValue);
@@ -496,6 +530,13 @@ public class MainActivity extends AppCompatActivity {
         bitrateRandomValue = findViewById(R.id.bitrateRandomValue);
         borderProgressValue = findViewById(R.id.borderProgressValue);
         borderProgressColorSwatch = findViewById(R.id.borderProgressColorSwatch);
+
+        // Ultimate Bypass (Version 7.0)
+        perspectiveXTiltValue = findViewById(R.id.perspectiveXTiltValue);
+        perspectiveYTiltValue = findViewById(R.id.perspectiveYTiltValue);
+        variableSpeedValue = findViewById(R.id.variableSpeedValue);
+        lumaPulseValue = findViewById(R.id.lumaPulseValue);
+        subPixelJitterValue = findViewById(R.id.subPixelJitterValue);
     }
 
     private void setupListeners() {
@@ -823,8 +864,27 @@ public class MainActivity extends AppCompatActivity {
         setupPair(swAmbientNoise, slAmbientNoise);
         setupPair(swBitrateRandom, slBitrateRandom);
 
+        // Ultimate Bypass (Version 7.0)
+        setupPair(swPerspective3D, slPerspectiveTiltX);
+        setupPair(swPerspective3D, slPerspectiveTiltY);
+        setupPair(swVariableSpeed, slVariableSpeedIntensity);
+        setupPair(swLumaPulse, slLumaPulseIntensity);
+        setupPair(swSubPixelJitter, slSubPixelJitter);
+
         if (swFlip != null) {
             swFlip.setOnCheckedChangeListener((b, c) -> updateTransformCount());
+        }
+        if (swAspectDistortion != null) {
+            swAspectDistortion.setOnCheckedChangeListener((b, c) -> updateTransformCount());
+        }
+        if (swAudioEq != null) {
+            swAudioEq.setOnCheckedChangeListener((b, c) -> updateTransformCount());
+        }
+        if (swMetadataScrubbing != null) {
+            swMetadataScrubbing.setOnCheckedChangeListener((b, c) -> updateTransformCount());
+        }
+        if (swJunkData != null) {
+            swJunkData.setOnCheckedChangeListener((b, c) -> updateTransformCount());
         }
     }
 
@@ -871,6 +931,13 @@ public class MainActivity extends AppCompatActivity {
         bindSliderValue(slAmbientNoise, ambientNoiseValue, v -> String.format(Locale.US, "%.3f", v));
         bindSliderValue(slBitrateRandom, bitrateRandomValue, v -> String.format(Locale.US, "%.0f%%", v * 100));
         bindSliderValue(slBorderProgress, borderProgressValue, v -> String.format(Locale.US, "%.0fpx", v));
+
+        // Ultimate Bypass (Version 7.0)
+        bindSliderValue(slPerspectiveTiltX, perspectiveXTiltValue, v -> String.format(Locale.US, "%.1f°", v));
+        bindSliderValue(slPerspectiveTiltY, perspectiveYTiltValue, v -> String.format(Locale.US, "%.1f°", v));
+        bindSliderValue(slVariableSpeedIntensity, variableSpeedValue, v -> String.format(Locale.US, "%.1f%%", v));
+        bindSliderValue(slLumaPulseIntensity, lumaPulseValue, v -> String.format(Locale.US, "%.1f%%", v / 10f));
+        bindSliderValue(slSubPixelJitter, subPixelJitterValue, v -> v > 10 ? "High" : (v > 5 ? "Medium" : "Low"));
 
         // Logo Remover sliders – guard against changes when switch is off
         bindSliderValueGuarded(slRemovalX, removalXValue,
@@ -1076,30 +1143,38 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void resetSlidersToDefault() {
-        if (slSpeed != null) slSpeed.setValue(1.04f);
-        if (slHue != null) slHue.setValue(5f);
-        if (slBright != null) slBright.setValue(1.03f);
-        if (slSaturation != null) slSaturation.setValue(1.05f);
-        if (slZoom != null) slZoom.setValue(1.03f);
-        if (slRotate != null) slRotate.setValue(0.5f);
-        if (slGamma != null) slGamma.setValue(1.02f);
-        if (slNoise != null) slNoise.setValue(0.015f);
-        if (slVignette != null) slVignette.setValue(0.2f);
-        if (slBorder != null) slBorder.setValue(4f);
-        if (slTint != null) slTint.setValue(0.03f);
-        if (slPixelShift != null) slPixelShift.setValue(2f);
-        if (slSharpen != null) slSharpen.setValue(0.2f);
-        if (slTrim != null) slTrim.setValue(0.3f);
-        if (slVolume != null) slVolume.setValue(0.97f);
-        if (slBlur != null) slBlur.setValue(0.3f);
-        if (slSepia != null) slSepia.setValue(0.05f);
-        if (slChromatic != null) slChromatic.setValue(1.1f);
-        if (slBarrel != null) slBarrel.setValue(0.045f);
-        if (slPitch != null) slPitch.setValue(1.012f);
-        if (slSpectralNoise != null) slSpectralNoise.setValue(0.002f);
-        if (slTemporalJitter != null) slTemporalJitter.setValue(0.02f);
-        if (slAmbientNoise != null) slAmbientNoise.setValue(0.005f);
-        if (slBitrateRandom != null) slBitrateRandom.setValue(0.15f);
+        TransformSettings defaultTs = new TransformSettings();
+        
+        if (slSpeed != null) slSpeed.setValue(defaultTs.speed);
+        if (slHue != null) slHue.setValue(defaultTs.hue);
+        if (slBright != null) slBright.setValue(defaultTs.bright);
+        if (slSaturation != null) slSaturation.setValue(defaultTs.saturation);
+        if (slZoom != null) slZoom.setValue(defaultTs.zoom);
+        if (slRotate != null) slRotate.setValue(defaultTs.rotate);
+        if (slGamma != null) slGamma.setValue(defaultTs.gamma);
+        if (slNoise != null) slNoise.setValue(defaultTs.noise);
+        if (slVignette != null) slVignette.setValue(defaultTs.vignette);
+        if (slBorder != null) slBorder.setValue(defaultTs.border);
+        if (slTint != null) slTint.setValue(defaultTs.tint);
+        if (slPixelShift != null) slPixelShift.setValue(defaultTs.pixelShift);
+        if (slSharpen != null) slSharpen.setValue(defaultTs.sharpen);
+        if (slTrim != null) slTrim.setValue(defaultTs.trim);
+        if (slVolume != null) slVolume.setValue(defaultTs.volume);
+        if (slBlur != null) slBlur.setValue(defaultTs.blur);
+        if (slSepia != null) slSepia.setValue(defaultTs.sepia);
+        if (slChromatic != null) slChromatic.setValue(defaultTs.chromatic);
+        if (slBarrel != null) slBarrel.setValue(defaultTs.barrel);
+        if (slPitch != null) slPitch.setValue(defaultTs.pitch);
+        if (slSpectralNoise != null) slSpectralNoise.setValue(defaultTs.spectralNoise);
+        if (slTemporalJitter != null) slTemporalJitter.setValue(defaultTs.jitterIntensity);
+        if (slAmbientNoise != null) slAmbientNoise.setValue(defaultTs.ambientNoiseLevel);
+        if (slBitrateRandom != null) slBitrateRandom.setValue(defaultTs.bitrateVariation);
+        if (slBorderProgress != null) slBorderProgress.setValue(defaultTs.borderProgressSize);
+        if (slPerspectiveTiltX != null) slPerspectiveTiltX.setValue(defaultTs.perspectiveTiltX);
+        if (slPerspectiveTiltY != null) slPerspectiveTiltY.setValue(defaultTs.perspectiveTiltY);
+        if (slVariableSpeedIntensity != null) slVariableSpeedIntensity.setValue(defaultTs.variableSpeedIntensity);
+        if (slLumaPulseIntensity != null) slLumaPulseIntensity.setValue(defaultTs.lumaPulseIntensity);
+        if (slSubPixelJitter != null) slSubPixelJitter.setValue(defaultTs.jitterStrength);
     }
 
     private void setAllTransforms(boolean enabled) {
@@ -1107,7 +1182,9 @@ public class MainActivity extends AppCompatActivity {
                 swFlip, swSpeed, swHue, swBright, swSaturation, swZoom, swRotate,
                 swGamma, swNoise, swVignette, swBorder, swTint, swPixelShift,
                 swSharpen, swTrim, swVolume, swBlur, swSepia, swChromatic, swBarrel, swPitch,
-                swSpectralNoise, swTemporalJitter, swAmbientNoise, swBitrateRandom, swBorderProgress
+                swSpectralNoise, swTemporalJitter, swAmbientNoise, swBitrateRandom, swBorderProgress,
+                swAspectDistortion, swAudioEq, swMetadataScrubbing, swJunkData,
+                swPerspective3D, swVariableSpeed, swLumaPulse, swAudioPhaseShift, swSubPixelJitter
         };
         for (SwitchCompat s : all) {
             if (s != null) s.setChecked(enabled);
@@ -1129,6 +1206,16 @@ public class MainActivity extends AppCompatActivity {
                 if (swHue != null) swHue.setChecked(true);
                 if (swBright != null) swBright.setChecked(true);
                 if (swNoise != null) swNoise.setChecked(true);
+                // Advanced bypass is always good for subtle
+                if (swAspectDistortion != null) swAspectDistortion.setChecked(true);
+                if (swAudioEq != null) swAudioEq.setChecked(true);
+                if (swMetadataScrubbing != null) swMetadataScrubbing.setChecked(true);
+                if (swJunkData != null) swJunkData.setChecked(true);
+                if (swPerspective3D != null) swPerspective3D.setChecked(true);
+                if (swVariableSpeed != null) swVariableSpeed.setChecked(true);
+                if (swLumaPulse != null) swLumaPulse.setChecked(true);
+                if (swAudioPhaseShift != null) swAudioPhaseShift.setChecked(true);
+                if (swSubPixelJitter != null) swSubPixelJitter.setChecked(true);
                 Toast.makeText(this, "✓ Subtle প্রিসেট সক্রিয়", Toast.LENGTH_SHORT).show();
                 break;
             case "audio":
@@ -1138,6 +1225,10 @@ public class MainActivity extends AppCompatActivity {
                 if (swPitch != null) swPitch.setChecked(true);
                 if (swSpectralNoise != null) swSpectralNoise.setChecked(true);
                 if (swAmbientNoise != null) swAmbientNoise.setChecked(true);
+                if (swAudioEq != null) swAudioEq.setChecked(true);
+                if (swAudioPhaseShift != null) swAudioPhaseShift.setChecked(true);
+                if (swMetadataScrubbing != null) swMetadataScrubbing.setChecked(true);
+                if (swJunkData != null) swJunkData.setChecked(true);
                 Toast.makeText(this, "✓ Audio-focused প্রিসেট সক্রিয়", Toast.LENGTH_SHORT).show();
                 break;
             case "video":
@@ -1152,6 +1243,13 @@ public class MainActivity extends AppCompatActivity {
                 if (swBorder != null) swBorder.setChecked(true);
                 if (swChromatic != null) swChromatic.setChecked(true);
                 if (swBarrel != null) swBarrel.setChecked(true);
+                if (swPerspective3D != null) swPerspective3D.setChecked(true);
+                if (swVariableSpeed != null) swVariableSpeed.setChecked(true);
+                if (swLumaPulse != null) swLumaPulse.setChecked(true);
+                if (swSubPixelJitter != null) swSubPixelJitter.setChecked(true);
+                if (swAspectDistortion != null) swAspectDistortion.setChecked(true);
+                if (swMetadataScrubbing != null) swMetadataScrubbing.setChecked(true);
+                if (swJunkData != null) swJunkData.setChecked(true);
                 Toast.makeText(this, "✓ Video-focused প্রিসেট সক্রিয়", Toast.LENGTH_SHORT).show();
                 break;
         }
@@ -1164,7 +1262,9 @@ public class MainActivity extends AppCompatActivity {
                 swFlip, swSpeed, swHue, swBright, swSaturation, swZoom, swRotate,
                 swGamma, swNoise, swVignette, swBorder, swTint, swPixelShift,
                 swSharpen, swTrim, swVolume, swBlur, swSepia, swChromatic, swBarrel, swPitch,
-                swSpectralNoise, swTemporalJitter, swAmbientNoise, swBitrateRandom, swBorderProgress
+                swSpectralNoise, swTemporalJitter, swAmbientNoise, swBitrateRandom, swBorderProgress,
+                swAspectDistortion, swAudioEq, swMetadataScrubbing, swJunkData,
+                swPerspective3D, swVariableSpeed, swLumaPulse, swAudioPhaseShift, swSubPixelJitter
         };
         for (SwitchCompat s : all) {
             if (s != null && s.isChecked()) count++;
@@ -1175,7 +1275,7 @@ public class MainActivity extends AppCompatActivity {
     private void updateTransformCount() {
         int count = countEnabled();
         if (transformCount != null) {
-            transformCount.setText(count + " টি ট্রান্সফর্ম · " + (count == 26 ? "সব ON" : count + " ON"));
+            transformCount.setText(count + " টি ট্রান্সফর্ম · " + (count == 35 ? "সব ON" : count + " ON"));
         }
         updateProcessSummary();
     }
@@ -1420,9 +1520,15 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception ignored) {
             }
         }
+
+        // Reset resolution and ratio to original for each new video
+        if (resolutionGroup != null) resolutionGroup.check(R.id.chipOriginal);
+        if (ratioGroup != null) ratioGroup.check(R.id.chipRatioOriginal);
+        selectedResolution = "original";
+        selectedRatio = "original";
+        updateOutputSummary();
     }
 
-    // Logo Handling
     private void loadLogoImage(Uri uri) {
         try {
             InputStream is = getContentResolver().openInputStream(uri);
@@ -1562,6 +1668,24 @@ public class MainActivity extends AppCompatActivity {
         ts.bitrateRandomEnabled = swBitrateRandom != null && swBitrateRandom.isChecked();
         ts.bitrateVariation = slBitrateRandom != null ? slBitrateRandom.getValue() : 0.15f;
 
+        // Advanced Bypass (NEW)
+        ts.aspectDistortionEnabled = swAspectDistortion != null && swAspectDistortion.isChecked();
+        ts.audioEqEnabled = swAudioEq != null && swAudioEq.isChecked();
+        ts.metadataScrubbingEnabled = swMetadataScrubbing != null && swMetadataScrubbing.isChecked();
+        ts.junkDataEnabled = swJunkData != null && swJunkData.isChecked();
+
+        // Ultimate Bypass (Version 7.0 - NEW)
+        ts.perspective3DEnabled = swPerspective3D != null && swPerspective3D.isChecked();
+        ts.perspectiveTiltX = slPerspectiveTiltX != null ? slPerspectiveTiltX.getValue() : 1.2f;
+        ts.perspectiveTiltY = slPerspectiveTiltY != null ? slPerspectiveTiltY.getValue() : 0.8f;
+        ts.variableSpeedEnabled = swVariableSpeed != null && swVariableSpeed.isChecked();
+        ts.variableSpeedIntensity = slVariableSpeedIntensity != null ? slVariableSpeedIntensity.getValue() : 1.5f;
+        ts.lumaPulseEnabled = swLumaPulse != null && swLumaPulse.isChecked();
+        ts.lumaPulseIntensity = slLumaPulseIntensity != null ? slLumaPulseIntensity.getValue() : 6.0f;
+        ts.audioPhaseShiftEnabled = swAudioPhaseShift != null && swAudioPhaseShift.isChecked();
+        ts.subPixelJitterEnabled = swSubPixelJitter != null && swSubPixelJitter.isChecked();
+        ts.jitterStrength = slSubPixelJitter != null ? slSubPixelJitter.getValue() : 4.0f;
+
         // ═══════════════════════════════════════════════════════════════
         // MANUAL OVERRIDE
         // ═══════════════════════════════════════════════════════════════
@@ -1608,9 +1732,10 @@ public class MainActivity extends AppCompatActivity {
 // REACTION FACE
 // ═══════════════════════════════════════════════════════════════
         ts.reactionFaceEnabled = swReactionFace != null && swReactionFace.isChecked() && selectedFaceVideoUri != null;
+        ts.reactionFaceAudioEnabled = swFaceAudio != null && swFaceAudio.isChecked();
         ts.reactionFaceUri = selectedFaceVideoUri != null ? selectedFaceVideoUri.toString() : null;
         ts.reactionFacePosition = selectedFacePosition;
-        ts.reactionFaceSize = slFaceVideoSize != null ? (int) slFaceVideoSize.getValue() : 25;
+        ts.reactionFaceSize = slFaceVideoSize != null ? (int) slFaceVideoSize.getValue() : 10;
         ts.reactionFaceCornerRadius = slFaceCornerRadius != null ? (int) slFaceCornerRadius.getValue() : 100;
     }
 
@@ -1699,6 +1824,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (swManualLogoRemover != null) swManualLogoRemover.setChecked(false);
 
+        // Reset Advanced Bypass
+        if (swAspectDistortion != null) swAspectDistortion.setChecked(true);
+        if (swAudioEq != null) swAudioEq.setChecked(true);
+        if (swMetadataScrubbing != null) swMetadataScrubbing.setChecked(true);
+        if (swJunkData != null) swJunkData.setChecked(true);
+
         outputExpanded = false;
         transformExpanded = false;
         watermarkExpanded = false;
@@ -1714,16 +1845,17 @@ public class MainActivity extends AppCompatActivity {
 
         // Reset Reaction Face
         if (swReactionFace != null) swReactionFace.setChecked(false);
+        if (swFaceAudio != null) swFaceAudio.setChecked(true);
         removeFaceVideo();
         selectedFacePosition = 0;
         if (chipFacePosTopLeft != null) chipFacePosTopLeft.setChecked(true);
         if (chipFacePosTopRight != null) chipFacePosTopRight.setChecked(false);
         if (chipFacePosBottomLeft != null) chipFacePosBottomLeft.setChecked(false);
         if (chipFacePosBottomRight != null) chipFacePosBottomRight.setChecked(false);
-        if (slFaceVideoSize != null) slFaceVideoSize.setValue(100);
-        if (slFaceCornerRadius != null) slFaceCornerRadius.setValue(100);
+        if (slFaceVideoSize != null) slFaceVideoSize.setValue(10);
+        if (slFaceCornerRadius != null) slFaceVideoSize.setValue(100);
 
-// Reset expansion state
+        // Reset expansion state
         reactionFaceExpanded = false;
         if (reactionFaceContent != null) reactionFaceContent.setVisibility(View.GONE);
         if (reactionFaceToggle != null) reactionFaceToggle.setText("▼");
@@ -1817,11 +1949,15 @@ public class MainActivity extends AppCompatActivity {
         float alpha = enabled ? 1.0f : 0.5f;
 
         if (faceVideoPickerArea != null) faceVideoPickerArea.setAlpha(alpha);
+        if (faceAudioSection != null) faceAudioSection.setAlpha(alpha);
         if (facePositionSection != null) facePositionSection.setAlpha(alpha);
         if (faceSizeSection != null) faceSizeSection.setAlpha(alpha);
         if (faceCornerSection != null) faceCornerSection.setAlpha(alpha);
 
-        // Enable/disable sliders
+        // Enable/disable sliders/switches
+        if (swFaceAudio != null) {
+            swFaceAudio.setEnabled(enabled);
+        }
         if (slFaceVideoSize != null) {
             slFaceVideoSize.setEnabled(enabled);
         }
@@ -1945,7 +2081,7 @@ public class MainActivity extends AppCompatActivity {
                 case 3: posText = "Bottom-Right"; break;
                 default: posText = "Top-Left"; break;
             }
-            int size = slFaceVideoSize != null ? (int) slFaceVideoSize.getValue() : 100;
+            int size = slFaceVideoSize != null ? (int) slFaceVideoSize.getValue() : 10;
             reactionFaceSummary.setText("✓ " + posText + " · " + size + "%");
             reactionFaceSummary.setTextColor(ContextCompat.getColor(this, R.color.colorAccent2));
         } else if (enabled) {
@@ -1959,3 +2095,4 @@ public class MainActivity extends AppCompatActivity {
         updateProcessSummary();
     }
 }
+

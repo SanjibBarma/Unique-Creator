@@ -5,13 +5,57 @@ import android.graphics.Rect;
 import java.io.Serializable;
 
 /**
- * Complete transformation settings with 26 features for maximum copyright bypass
- * Version: 6.0 (Manual Logo Removal + Border Progress)
+ * Complete transformation settings with 35 features for maximum copyright bypass
+ * Version: 7.0 (Ultimate Bypass)
  * Updated: January 2025
  */
 public class TransformSettings implements Serializable {
 
-    private static final long serialVersionUID = 6L; // ★ Updated
+    private static final long serialVersionUID = 7L; // ★ Updated for Advanced Bypass
+
+    // ════════════════════════════════════════════════════════════════════
+    // ADVANCED BYPASS FEATURES (27-35)
+    // ════════════════════════════════════════════════════════════════════
+
+    // 27. Aspect Distortion (subtle stretch)
+    public boolean aspectDistortionEnabled = true;
+    public float aspectDistortionX = 1.008f; // Reduced from 1.015
+    public float aspectDistortionY = 0.992f; // Reduced from 0.985
+
+    // 28. Audio EQ Shifting (bass/treble balance)
+    public boolean audioEqEnabled = true;
+    public float audioEqBass = 1.15f;    // 0.8 - 1.5
+    public float audioEqTreble = 1.05f;  // 0.8 - 1.5
+
+    // 29. Metadata Scrubbing (clean file info)
+    public boolean metadataScrubbingEnabled = true;
+
+    // 30. Junk Data Injection (unique file hash)
+    public boolean junkDataEnabled = true;
+
+    // ════════════════════════════════════════════════════════════════════
+    // ULTIMATE BYPASS FEATURES (31-35) - Version 7.0
+    // ════════════════════════════════════════════════════════════════════
+
+    // 31. 3D Perspective Warp (Structural Tilt)
+    public boolean perspective3DEnabled = true;
+    public float perspectiveTiltX = 1.2f; 
+    public float perspectiveTiltY = 0.8f; 
+
+    // 32. Temporal Variable Speed (VFR Oscillation)
+    public boolean variableSpeedEnabled = true;
+    public float variableSpeedIntensity = 1.5f; // 1.5% in UI
+
+    // 33. Dynamic Luma/Chroma Pulse (Subtle Oscillation)
+    public boolean lumaPulseEnabled = true;
+    public float lumaPulseIntensity = 6.0f; // 0.6% in UI (stored as 6.0)
+
+    // 34. Audio Phase Shifting (Waveform Inversion)
+    public boolean audioPhaseShiftEnabled = true;
+
+    // 35. Sub-Pixel Jitter (Micro Shake)
+    public boolean subPixelJitterEnabled = true;
+    public float jitterStrength = 4.0f; // Strength level 4 in UI
 
     // ════════════════════════════════════════════════════════════════════
     // ORIGINAL 21 TRANSFORMATIONS
@@ -22,11 +66,11 @@ public class TransformSettings implements Serializable {
 
     // 2. Speed (playback rate)
     public boolean speedEnabled = true;
-    public float speed = 1.04f; // 0.5x - 2.0x
+    public float speed = 1.01f; // Updated for stepSize 0.01 compatibility (from 0.8)
 
     // 3. Hue shift (color rotation)
     public boolean hueEnabled = true;
-    public float hue = 5f; // degrees (-180 to +180)
+    public float hue = 2.0f; // Reduced from 5.0
 
     // 4. Brightness (luminance multiplier)
     public boolean brightEnabled = true;
@@ -38,11 +82,11 @@ public class TransformSettings implements Serializable {
 
     // 6. Zoom (scale from center)
     public boolean zoomEnabled = true;
-    public float zoom = 1.03f; // 1.0 - 3.0
+    public float zoom = 1.02f; // Reduced from 1.03
 
     // 7. Rotation (slight angle)
     public boolean rotateEnabled = true;
-    public float rotate = 0.5f; // degrees (-5 to +5)
+    public float rotate = 0.3f; // Reduced from 0.5
 
     // 8. Gamma (contrast curve)
     public boolean gammaEnabled = true;
@@ -50,7 +94,7 @@ public class TransformSettings implements Serializable {
 
     // 9. Noise / Film grain
     public boolean noiseEnabled = true;
-    public float noise = 0.015f; // 0.0 - 0.1
+    public float noise = 0.015f; // 0.005 - 0.05
 
     // 10. Vignette (edge darkening)
     public boolean vignetteEnabled = true;
@@ -95,11 +139,11 @@ public class TransformSettings implements Serializable {
 
     // 20. Barrel Distortion (lens curve effect)
     public boolean barrelEnabled = true;
-    public float barrel = 0.045f; // strength 0.0 - 0.15
+    public float barrel = 0.045f; // 0.02 - 0.08
 
     // 21. Audio Pitch Shift (independent of speed)
     public boolean pitchEnabled = true;
-    public float pitch = 1.012f; // 0.8 - 1.2 (1.0 = no change)
+    public float pitch = 1.012f; // Compatible with stepSize 0.002 (from 0.98)
 
     // ════════════════════════════════════════════════════════════════════
     // ENHANCEMENTS (22-26)
@@ -107,7 +151,7 @@ public class TransformSettings implements Serializable {
 
     // 22. Audio Spectral Noise (high-frequency masking)
     public boolean spectralNoiseEnabled = true;
-    public float spectralNoise = 0.002f; // 0.001 - 0.01
+    public float spectralNoise = 0.001f; // Reduced from 0.002
 
     // 23. Temporal Jitter (random frame drop/duplicate)
     public boolean temporalJitterEnabled = true;
@@ -115,7 +159,7 @@ public class TransformSettings implements Serializable {
 
     // 24. Ambient Background Noise (room tone simulation)
     public boolean ambientNoiseEnabled = true;
-    public float ambientNoiseLevel = 0.005f; // 0.001 - 0.02
+    public float ambientNoiseLevel = 0.003f; // Reduced from 0.005
 
     // 25. Bitrate Randomization (encoding fingerprint)
     public boolean bitrateRandomEnabled = true;
@@ -217,6 +261,9 @@ public class TransformSettings implements Serializable {
 
     // Enable reaction face overlay
     public boolean reactionFaceEnabled = false;
+
+    // Enable reaction face audio
+    public boolean reactionFaceAudioEnabled = true;
 
     // Face video URI (stored as String for Serializable)
     public String reactionFaceUri = null;

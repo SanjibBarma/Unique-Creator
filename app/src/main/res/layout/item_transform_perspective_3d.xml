@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_transform_item"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_marginBottom="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@android:drawable/ic_menu_compass"
+            app:tint="@color/colorAccent1" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:text="3D Perspective Warp"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swPerspective3D"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            app:thumbTint="@color/switch_thumb"
+            app:trackTint="@color/switch_track" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="ভিডিওকে ৩ডি স্পেসে হালকা হেলানো (Tilt) করে"
+        android:textColor="@color/text_muted"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:id="@+id/perspectiveControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="X-Tilt (লেফট-রাইট)"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+            <TextView
+                android:id="@+id/perspectiveXTiltValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1.2°"
+                android:textColor="@color/colorAccent1"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slPerspectiveTiltX"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:value="1.2"
+            android:valueFrom="-3.0"
+            android:valueTo="3.0"
+            app:haloColor="@color/colorAccent1_transparent"
+            app:thumbColor="@color/colorAccent1"
+            app:trackColorActive="@color/colorAccent1"
+            app:trackColorInactive="@color/divider_color" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Y-Tilt (টপ-বটম)"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+            <TextView
+                android:id="@+id/perspectiveYTiltValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.8°"
+                android:textColor="@color/colorAccent1"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/slPerspectiveTiltY"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:value="0.8"
+            android:valueFrom="-3.0"
+            android:valueTo="3.0"
+            app:haloColor="@color/colorAccent1_transparent"
+            app:thumbColor="@color/colorAccent1"
+            app:trackColorActive="@color/colorAccent1"
+            app:trackColorInactive="@color/divider_color" />
+    </LinearLayout>
+</LinearLayout>

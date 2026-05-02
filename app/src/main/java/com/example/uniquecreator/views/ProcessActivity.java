@@ -411,10 +411,10 @@ public class ProcessActivity extends AppCompatActivity {
             updateStage(1, "বিশ্লেষণ করা হচ্ছে...");
         } else if (percent < 35) {
             updateStage(2, "প্রসেসিং শুরু...");
-        } else if (percent < 90) {
+        } else if (percent < 100) {
             updateStage(3, "এনকোডিং হচ্ছে...");
         } else {
-            updateStage(4, "ফাইনালাইজ হচ্ছে...");
+            updateStage(4, "✓ সম্পন্ন!");
         }
 
         if (message != null && message.contains("ফ্রেম:")) {

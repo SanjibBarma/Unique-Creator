@@ -128,7 +128,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="26+"
+                        android:text="35+"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@color/colorPrimary"/>
@@ -449,7 +449,7 @@
                 android:visibility="gone">
 
                 <!-- ═══════════════════════════════════════════════════════════════ -->
-                <!-- STEP 2: RESOLUTION & RATIO (Collapsible) -->
+                <!-- STEP 2: RESOLUTION and RATIO (Collapsible) -->
                 <!-- ═══════════════════════════════════════════════════════════════ -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
@@ -749,7 +749,7 @@
                                     android:id="@+id/transformCount"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="26 টি ট্রান্সফর্ম · সব ON"
+                                    android:text="35 টি ট্রান্সফর্ম · সব ON"
                                     android:textColor="@color/colorAccent2"
                                     android:textSize="11sp"
                                     android:layout_marginTop="2dp"/>
@@ -872,33 +872,64 @@
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical">
 
-                                <!-- All 26 Transforms -->
-                                <include layout="@layout/item_transform_flip"/>
-                                <include layout="@layout/item_transform_border_progress"/>
+                                <!-- Group 1: Audio Transformations -->
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🎧 Audio Transformations"
+                                    android:textColor="@color/colorPrimary"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    android:layout_marginBottom="12dp"
+                                    android:layout_marginTop="8dp"/>
+
+                                <include layout="@layout/item_transform_volume"/>
+                                <include layout="@layout/item_transform_pitch"/>
+                                <include layout="@layout/item_transform_audio_phase"/>
+                                <include layout="@layout/item_transform_audio_eq"/>
+                                <include layout="@layout/item_spectral_noise"/>
+                                <include layout="@layout/item_ambient_noise"/>
+
+                                <!-- Group 2: Video and Geometry (AI Bypass) -->
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🎬 Video Geometry Transformations"
+                                    android:textColor="@color/colorPrimary"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    android:layout_marginBottom="12dp"
+                                    android:layout_marginTop="16dp"/>
+
                                 <include layout="@layout/item_transform_speed"/>
-                                <include layout="@layout/item_transform_hue"/>
-                                <include layout="@layout/item_transform_bright"/>
-                                <include layout="@layout/item_transform_saturation"/>
+                                <include layout="@layout/item_transform_variable_speed"/>
+                                <include layout="@layout/item_transform_perspective_3d"/>
+                                <include layout="@layout/item_transform_flip"/>
                                 <include layout="@layout/item_transform_zoom"/>
                                 <include layout="@layout/item_transform_rotate"/>
+                                <include layout="@layout/item_transform_aspect"/>
+                                <include layout="@layout/item_transform_hue"/>
+                                <include layout="@layout/item_transform_luma_pulse"/>
+                                <include layout="@layout/item_transform_bright"/>
+                                <include layout="@layout/item_transform_saturation"/>
                                 <include layout="@layout/item_transform_gamma"/>
-                                <include layout="@layout/item_transform_noise"/>
                                 <include layout="@layout/item_transform_vignette"/>
-                                <include layout="@layout/item_transform_border"/>
                                 <include layout="@layout/item_transform_tint"/>
-                                <include layout="@layout/item_transform_pixelshift"/>
-                                <include layout="@layout/item_transform_sharpen"/>
-                                <include layout="@layout/item_transform_trim"/>
-                                <include layout="@layout/item_transform_volume"/>
-                                <include layout="@layout/item_transform_blur"/>
                                 <include layout="@layout/item_transform_sepia"/>
                                 <include layout="@layout/item_transform_chromatic"/>
                                 <include layout="@layout/item_transform_barrel"/>
-                                <include layout="@layout/item_transform_pitch"/>
-                                <include layout="@layout/item_spectral_noise"/>
+                                <include layout="@layout/item_transform_sharpen"/>
+                                <include layout="@layout/item_transform_blur"/>
+                                <include layout="@layout/item_transform_noise"/>
                                 <include layout="@layout/item_temporal_jitter"/>
-                                <include layout="@layout/item_ambient_noise"/>
+                                <include layout="@layout/item_transform_subpixel_jitter"/>
+                                <include layout="@layout/item_transform_pixelshift"/>
+                                <include layout="@layout/item_transform_border"/>
+                                <include layout="@layout/item_transform_border_progress"/>
+                                <include layout="@layout/item_transform_trim"/>
                                 <include layout="@layout/item_bitrate_randomization"/>
+                                <include layout="@layout/item_transform_metadata"/>
+                                <include layout="@layout/item_transform_junk_data"/>
 
                             </LinearLayout>
                         </LinearLayout>
@@ -1764,7 +1795,7 @@
                                     android:id="@+id/processSummary"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="26 ট্রান্সফর্ম · অরিজিনাল রেজুলেশন"
+                                    android:text="35 ট্রান্সফর্ম · অরিজিনাল রেজুলেশন"
                                     android:textColor="@color/text_muted"
                                     android:textSize="12sp"
                                     android:layout_marginTop="2dp"/>

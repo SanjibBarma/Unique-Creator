@@ -195,7 +195,7 @@
                 android:paddingVertical="6dp"
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/bg_splash_pill"
-                android:text="⚡ 26+ ট্রান্সফর্ম"
+                android:text="⚡ 35+ ট্রান্সফর্ম"
                 android:textColor="@color/colorPrimary"
                 android:textSize="11sp"/>
 
