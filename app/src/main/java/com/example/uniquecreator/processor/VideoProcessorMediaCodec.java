@@ -289,7 +289,7 @@ public class VideoProcessorMediaCodec {
 
         // === PROGRESS CALCULATION ===
         boolean hasAudio = (audioTrackIndex >= 0 && audioFormat != null);
-        boolean needsAudioProcessing = hasAudio && needsAudioProcessing(ts, false);
+        boolean needsAudioProcessing = (hasAudio || ts.hasExtraAudio()) && needsAudioProcessing(ts, false);
 
         // Weight: video = 75%, audio = 20%, init+finalize = 5%
         // If no audio processing: video = 90%, init+finalize = 10%
@@ -468,7 +468,7 @@ public class VideoProcessorMediaCodec {
         final boolean FACE_HAS_AUDIO = (faceAudioTrackIndex >= 0 && faceAudioFormat != null && ts.reactionFaceAudioEnabled);
 
         // Re-check audio processing need with face audio info
-        final boolean NEEDS_AUDIO_PROCESSING = hasAudio && needsAudioProcessing(ts, FACE_HAS_AUDIO);
+        final boolean NEEDS_AUDIO_PROCESSING = (hasAudio || ts.hasExtraAudio()) && needsAudioProcessing(ts, FACE_HAS_AUDIO);
 
         final float faceSize = ts.reactionFaceSize / 100f;
         final float faceCornerRadius = ts.reactionFaceCornerRadius / 100f;
@@ -921,6 +921,16 @@ public class VideoProcessorMediaCodec {
                     FACE_HAS_AUDIO, FACE_URI, FACE_AUDIO_TRACK_INDEX, FACE_AUDIO_FORMAT,
                     INIT_WEIGHT, VIDEO_WEIGHT, AUDIO_WEIGHT, FINALIZE_WEIGHT
             );
+        } else if (ts.hasExtraAudio() || (hasFaceVideo && ts.reactionFaceAudioEnabled)) {
+            // Synthesize silence to mix with extra audio/face audio if video has no audio track
+            MediaFormat dummyFormat = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, 44100, 2);
+            processAudioStable(
+                    context, null, tempVideoPath, outputPath,
+                    -1, dummyFormat,
+                    trimStartUs, speedFactor, volumeFactor, effectiveDurationUs, callback, ts,
+                    FACE_HAS_AUDIO, FACE_URI, FACE_AUDIO_TRACK_INDEX, FACE_AUDIO_FORMAT,
+                    INIT_WEIGHT, VIDEO_WEIGHT, AUDIO_WEIGHT, FINALIZE_WEIGHT
+            );
         } else {
             boolean renamed = tempVideoFile.renameTo(new File(outputPath));
             if (!renamed) {
@@ -961,7 +971,92 @@ public class VideoProcessorMediaCodec {
                 ts.spectralNoiseEnabled ||
                 ts.ambientNoiseEnabled ||
                 ts.trimEnabled ||
+                ts.extraAudioEnabled ||
                 faceAudioMixNeeded;
+    }
+
+    private long totalSamplesEncoded = 0;
+    private int audioFrameCounter = 0;
+    private long lastAudioProgress = 0;
+
+    private void processAndEncodeSamples(short[] samples, MediaCodec audioEncoder,
+                                         int sampleRate, int channelCount, float speedFactor,
+                                         long maxDurationUs, TransformSettings ts,
+                                         ProgressCallback callback, int basePct, float audioWeight) {
+
+        // Apply speed/resampling for sync
+        if (Math.abs(speedFactor - 1f) > 0.001f) {
+            samples = resampleAudio(samples, speedFactor, channelCount);
+        }
+
+        // Apply Advanced EQ
+        if (ts.audioEqEnabled) {
+            samples = applyAudioEQ(samples, ts.audioEqBass, ts.audioEqTreble, sampleRate);
+        }
+
+        // 34. Audio Phase Shifting
+        if (ts.audioPhaseShiftEnabled) {
+            for (int i = 0; i < samples.length; i++) {
+                samples[i] = (short) (-samples[i]);
+            }
+        }
+
+        // Apply effects
+        if (ts.pitchEnabled && Math.abs(ts.pitch - 1f) > 0.005f) {
+            samples = applyPitchToSamples(samples, ts.pitch, channelCount);
+        }
+        if (ts.spectralNoiseEnabled && ts.spectralNoise > 0.0001f) {
+            samples = applySpectralNoise(samples, ts.spectralNoise, sampleRate);
+        }
+        if (ts.ambientNoiseEnabled && ts.ambientNoiseLevel > 0.0001f) {
+            samples = applyAmbientNoise(samples, ts.ambientNoiseLevel);
+        }
+
+        if (samples.length > 0) {
+            int offset = 0;
+            while (offset < samples.length && !isCancelled) {
+                int inIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
+                if (inIdx >= 0) {
+                    ByteBuffer inBuf = audioEncoder.getInputBuffer(inIdx);
+                    if (inBuf != null) {
+                        inBuf.clear();
+                        int remainingSamples = samples.length - offset;
+                        int canWriteBytes = inBuf.capacity();
+                        int toWriteSamples = Math.min(remainingSamples, canWriteBytes / 2);
+
+                        ByteBuffer pcm = ByteBuffer.allocate(toWriteSamples * 2).order(ByteOrder.LITTLE_ENDIAN);
+                        pcm.asShortBuffer().put(samples, offset, toWriteSamples);
+                        inBuf.put(pcm.array());
+
+                        long outPts = (totalSamplesEncoded * 1_000_000L) / (sampleRate * channelCount);
+                        audioEncoder.queueInputBuffer(inIdx, 0, toWriteSamples * 2, outPts, 0);
+                        
+                        totalSamplesEncoded += toWriteSamples;
+                        offset += toWriteSamples;
+                        audioFrameCounter++;
+
+                        if (audioFrameCounter % 25 == 0 || System.currentTimeMillis() - lastAudioProgress > 500) {
+                            double audioRatio = (maxDurationUs > 0) ? (double) outPts / maxDurationUs : 0.0;
+                            audioRatio = Math.max(0.0, Math.min(1.0, audioRatio));
+
+                            int audioPct = (int) (basePct + audioWeight * 100 * audioRatio);
+                            callback.onProgress(Math.min(audioPct, (int) (basePct + audioWeight * 100)), "অডিও:" + audioFrameCounter);
+                            lastAudioProgress = System.currentTimeMillis();
+                        }
+                    }
+                } else {
+                    // Wait for encoder to be ready
+                    try { Thread.sleep(10); } catch (InterruptedException ignored) {}
+                }
+            }
+        }
+    }
+
+    private void signalEndOfAudioStream(MediaCodec audioEncoder) {
+        int eosIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
+        if (eosIdx >= 0) {
+            audioEncoder.queueInputBuffer(eosIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+        }
     }
 
     private void processAudioStable(Context context, Uri inputUri, String tempVideoPath, String finalOutputPath,
@@ -987,30 +1082,61 @@ public class VideoProcessorMediaCodec {
         MediaCodec audioDecoder = null;
         MediaExtractor faceAudioExtractor = null;
         MediaCodec faceAudioDecoder = null;
+        MediaExtractor extraAudioExtractor = null;
+        MediaCodec extraAudioDecoder = null;
         MediaCodec audioEncoder = null;
         MediaMuxer finalMuxer = null;
         MediaExtractor tempVideoExtractor = null;
+
+        boolean useExtraAudio = ts.hasExtraAudio();
 
         try {
             int audioStartPct = (int) ((initWeight + videoWeight) * 100);
             callback.onProgress(audioStartPct, "অডিও প্রসেসিং...");
 
-            audioExtractor = new MediaExtractor();
-            audioExtractor.setDataSource(context, inputUri, null);
-            audioExtractor.selectTrack(audioTrackIndex);
-            if (trimStartUs > 0) audioExtractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+            if (audioTrackIndex >= 0) {
+                audioExtractor = new MediaExtractor();
+                audioExtractor.setDataSource(context, inputUri, null);
+                audioExtractor.selectTrack(audioTrackIndex);
+                if (trimStartUs > 0) audioExtractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+            }
 
             String audioMime = audioFormat.getString(MediaFormat.KEY_MIME);
             int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
             int channelCount = audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
 
-            float mainVolume = useFaceAudio ? volumeFactor * 0.70f : volumeFactor;
-            float faceVolume = useFaceAudio ? 1.0f : 0.0f;
+            int mainChannels = channelCount;
+            int mainSampleRate = sampleRate;
+            int faceChannels = 1;
+            int extraChannels = 1;
+            int extraSampleRate = sampleRate;
+
+            float mainVolume = volumeFactor * 0.75f;
+            if (useFaceAudio && useExtraAudio) {
+                mainVolume *= 0.70f;
+            } else if (useFaceAudio || useExtraAudio) {
+                mainVolume *= 0.85f;
+            }
+            float faceVolume = 0.8f;
+            // Balanced extra volume to avoid clipping
+            float extraVolume = useExtraAudio ? Math.max(0.15f, (ts.extraAudioVolume * 0.8f) / 100f) : 0.0f;
+            Log.d(TAG, "Audio Setup tuned: mainVol=" + mainVolume + ", extraVol=" + extraVolume);
 
             if (useFaceAudio) {
                 try {
+                    Uri fUri = Uri.parse(ts.reactionFaceUri);
                     faceAudioExtractor = new MediaExtractor();
-                    faceAudioExtractor.setDataSource(context, faceUri, null);
+                    android.content.res.AssetFileDescriptor afd = null;
+                    try {
+                        afd = context.getContentResolver().openAssetFileDescriptor(fUri, "r");
+                        if (afd != null) faceAudioExtractor.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                        else faceAudioExtractor.setDataSource(context, fUri, null);
+                    } catch (Exception e) {
+                        faceAudioExtractor.setDataSource(context, fUri, null);
+                    } finally {
+                        if (afd != null) try { afd.close(); } catch (Exception ignored) {}
+                    }
+                    
                     faceAudioExtractor.selectTrack(faceAudioTrackIndex);
                     if (trimStartUs > 0) faceAudioExtractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
 
@@ -1018,17 +1144,100 @@ public class VideoProcessorMediaCodec {
                     faceAudioDecoder = MediaCodec.createDecoderByType(faceMime);
                     faceAudioDecoder.configure(faceAudioFormat, null, null, 0);
                     faceAudioDecoder.start();
+                    faceChannels = faceAudioFormat.containsKey(MediaFormat.KEY_CHANNEL_COUNT) ? 
+                                    faceAudioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT) : 1;
                 } catch (Exception e) {
                     Log.e(TAG, "Face audio setup failed", e);
                     useFaceAudio = false;
-                    faceVolume = 0f;
                     mainVolume = volumeFactor;
                 }
             }
 
-            audioDecoder = MediaCodec.createDecoderByType(audioMime);
-            audioDecoder.configure(audioFormat, null, null, 0);
-            audioDecoder.start();
+            if (useExtraAudio) {
+                try {
+                    Uri extraUri = Uri.parse(ts.extraAudioUri);
+                    Log.d(TAG, "Attempting to load extra audio: " + extraUri);
+                    extraAudioExtractor = new MediaExtractor();
+                    
+                    boolean loaded = false;
+                    // Method 1: AssetFileDescriptor (best for content URIs)
+                    try (android.content.res.AssetFileDescriptor afd = context.getContentResolver().openAssetFileDescriptor(extraUri, "r")) {
+                        if (afd != null) {
+                            extraAudioExtractor.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                            loaded = true;
+                            Log.d(TAG, "Extra audio loaded via AFD");
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "AFD extra audio failed: " + e.getMessage());
+                    }
+
+                    // Method 2: ParcelFileDescriptor (alternative for scoped storage)
+                    if (!loaded) {
+                        try (android.os.ParcelFileDescriptor pfd = context.getContentResolver().openFileDescriptor(extraUri, "r")) {
+                            if (pfd != null) {
+                                extraAudioExtractor.setDataSource(pfd.getFileDescriptor());
+                                loaded = true;
+                                Log.d(TAG, "Extra audio loaded via PFD");
+                            }
+                        } catch (Exception e) {
+                            Log.w(TAG, "PFD extra audio failed: " + e.getMessage());
+                        }
+                    }
+
+                    // Method 3: Direct context (fallback)
+                    if (!loaded) {
+                        try {
+                            extraAudioExtractor.setDataSource(context, extraUri, null);
+                            loaded = true;
+                            Log.d(TAG, "Extra audio loaded via direct context");
+                        } catch (Exception e) {
+                            Log.e(TAG, "All extra audio loading methods failed", e);
+                        }
+                    }
+
+                    if (loaded) {
+                        int exTrack = -1;
+                        MediaFormat exFmt = null;
+                        for (int i = 0; i < extraAudioExtractor.getTrackCount(); i++) {
+                            MediaFormat f = extraAudioExtractor.getTrackFormat(i);
+                            String mime = f.getString(MediaFormat.KEY_MIME);
+                            if (mime != null && mime.startsWith("audio/")) {
+                                exTrack = i;
+                                exFmt = f;
+                                break;
+                            }
+                        }
+                        if (exTrack >= 0 && exFmt != null) {
+                            extraChannels = exFmt.containsKey(MediaFormat.KEY_CHANNEL_COUNT) ?
+                                            exFmt.getInteger(MediaFormat.KEY_CHANNEL_COUNT) : 1;
+                            extraSampleRate = exFmt.containsKey(MediaFormat.KEY_SAMPLE_RATE) ?
+                                              exFmt.getInteger(MediaFormat.KEY_SAMPLE_RATE) : sampleRate;
+                            
+                            Log.d(TAG, "Extra Audio Track Found: " + exFmt.getString(MediaFormat.KEY_MIME) + 
+                                  ", channels=" + extraChannels + ", rate=" + extraSampleRate);
+                                  
+                            extraAudioExtractor.selectTrack(exTrack);
+                            extraAudioDecoder = MediaCodec.createDecoderByType(exFmt.getString(MediaFormat.KEY_MIME));
+                            extraAudioDecoder.configure(exFmt, null, null, 0);
+                            extraAudioDecoder.start();
+                        } else {
+                            Log.e(TAG, "No audio track found in extra audio file");
+                            useExtraAudio = false;
+                        }
+                    } else {
+                        useExtraAudio = false;
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Extra audio setup error", e);
+                    useExtraAudio = false;
+                }
+            }
+
+            if (audioTrackIndex >= 0) {
+                audioDecoder = MediaCodec.createDecoderByType(audioMime);
+                audioDecoder.configure(audioFormat, null, null, 0);
+                audioDecoder.start();
+            }
 
             MediaFormat encFmt = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, channelCount);
             encFmt.setInteger(MediaFormat.KEY_BIT_RATE, 128000);
@@ -1104,16 +1313,20 @@ public class VideoProcessorMediaCodec {
             boolean encodeDone = false;
             boolean faceInputDone = false;
             boolean faceDecodeDone = false;
+            boolean extraInputDone = false;
+            boolean extraDecodeDone = false;
 
-            long totalSamplesEncoded = 0;
-            int audioFrameCounter = 0;
-            long lastAudioProgress = System.currentTimeMillis();
+            totalSamplesEncoded = 0;
+            audioFrameCounter = 0;
+            lastAudioProgress = System.currentTimeMillis();
 
             short[] pendingFaceSamples = null;
             int faceBufferReadPos = 0;
+            short[] pendingExtraSamples = null;
+            int extraBufferReadPos = 0;
 
             while (!encodeDone && !isCancelled) {
-                if (!inputDone) {
+                if (audioTrackIndex >= 0 && !inputDone) {
                     int inIdx = audioDecoder.dequeueInputBuffer(TIMEOUT_US);
                     if (inIdx >= 0) {
                         ByteBuffer inBuf = audioDecoder.getInputBuffer(inIdx);
@@ -1132,8 +1345,9 @@ public class VideoProcessorMediaCodec {
                 }
 
                 if (useFaceAudio && !faceInputDone && faceAudioDecoder != null && faceAudioExtractor != null) {
-                    int inIdx = faceAudioDecoder.dequeueInputBuffer(0);
-                    if (inIdx >= 0) {
+                    for (int i = 0; i < 5; i++) {
+                        int inIdx = faceAudioDecoder.dequeueInputBuffer(0);
+                        if (inIdx < 0) break;
                         ByteBuffer inBuf = faceAudioDecoder.getInputBuffer(inIdx);
                         if (inBuf != null) {
                             inBuf.clear();
@@ -1141,6 +1355,7 @@ public class VideoProcessorMediaCodec {
                             if (sz < 0) {
                                 faceAudioDecoder.queueInputBuffer(inIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                                 faceInputDone = true;
+                                break;
                             } else {
                                 faceAudioDecoder.queueInputBuffer(inIdx, 0, sz, faceAudioExtractor.getSampleTime(), 0);
                                 faceAudioExtractor.advance();
@@ -1149,9 +1364,38 @@ public class VideoProcessorMediaCodec {
                     }
                 }
 
+                if (useExtraAudio && !extraInputDone && extraAudioDecoder != null && extraAudioExtractor != null) {
+                    for (int i = 0; i < 8; i++) { // More aggressive for extra audio
+                        int inIdx = extraAudioDecoder.dequeueInputBuffer(0);
+                        if (inIdx < 0) break;
+                        ByteBuffer inBuf = extraAudioDecoder.getInputBuffer(inIdx);
+                        if (inBuf != null) {
+                            inBuf.clear();
+                            int sz = extraAudioExtractor.readSampleData(inBuf, 0);
+                            if (sz < 0) {
+                                extraAudioExtractor.seekTo(0, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+                                sz = extraAudioExtractor.readSampleData(inBuf, 0);
+                            }
+                            if (sz >= 0) {
+                                extraAudioDecoder.queueInputBuffer(inIdx, 0, sz, extraAudioExtractor.getSampleTime(), 0);
+                                extraAudioExtractor.advance();
+                            } else {
+                                extraAudioDecoder.queueInputBuffer(inIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                                extraInputDone = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 if (useFaceAudio && !faceDecodeDone && faceAudioDecoder != null) {
-                    int outIdx = faceAudioDecoder.dequeueOutputBuffer(faceDecInfo, 0);
-                    if (outIdx >= 0) {
+                    while (true) {
+                        int outIdx = faceAudioDecoder.dequeueOutputBuffer(faceDecInfo, 0);
+                        if (outIdx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                            faceChannels = faceAudioDecoder.getOutputFormat().getInteger(MediaFormat.KEY_CHANNEL_COUNT);
+                            continue;
+                        }
+                        if (outIdx < 0) break;
                         ByteBuffer outBuf = faceAudioDecoder.getOutputBuffer(outIdx);
                         if (faceDecInfo.size > 0 && outBuf != null) {
                             outBuf.position(faceDecInfo.offset);
@@ -1175,116 +1419,187 @@ public class VideoProcessorMediaCodec {
                         faceAudioDecoder.releaseOutputBuffer(outIdx, false);
                         if ((faceDecInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                             faceDecodeDone = true;
+                            break;
                         }
                     }
                 }
 
-                if (!decodeDone) {
-                    int outIdx = audioDecoder.dequeueOutputBuffer(decInfo, TIMEOUT_US);
-                    if (outIdx >= 0) {
-                        ByteBuffer outBuf = audioDecoder.getOutputBuffer(outIdx);
-
-                        if (decInfo.size > 0 && outBuf != null) {
-                            outBuf.position(decInfo.offset);
-                            outBuf.limit(decInfo.offset + decInfo.size);
+                if (useExtraAudio && !extraDecodeDone && extraAudioDecoder != null) {
+                    while (true) {
+                        MediaCodec.BufferInfo extraDecInfo = new MediaCodec.BufferInfo();
+                        int outIdx = extraAudioDecoder.dequeueOutputBuffer(extraDecInfo, 0);
+                        if (outIdx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                            extraChannels = extraAudioDecoder.getOutputFormat().getInteger(MediaFormat.KEY_CHANNEL_COUNT);
+                            continue;
+                        }
+                        if (outIdx < 0) break;
+                        ByteBuffer outBuf = extraAudioDecoder.getOutputBuffer(outIdx);
+                        if (extraDecInfo.size > 0 && outBuf != null) {
+                            outBuf.position(extraDecInfo.offset);
+                            outBuf.limit(extraDecInfo.offset + extraDecInfo.size);
                             ShortBuffer sb = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
-                            short[] samples = new short[sb.remaining()];
-                            sb.get(samples);
+                            short[] newExtra = new short[sb.remaining()];
+                            sb.get(newExtra);
 
-                            // Apply main volume
-                            for (int i = 0; i < samples.length; i++) {
-                                float s = samples[i] * mainVolume;
-                                samples[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) s));
+                            // Resample to match main audio sample rate
+                            if (extraSampleRate != mainSampleRate) {
+                                float rf = (float) extraSampleRate / mainSampleRate;
+                                newExtra = resampleAudio(newExtra, rf, extraChannels);
                             }
 
-                            // Mix face audio
-                            if (useFaceAudio && pendingFaceSamples != null) {
-                                int available = pendingFaceSamples.length - faceBufferReadPos;
-                                int toMix = Math.min(samples.length, available);
+                            if (pendingExtraSamples == null) {
+                                pendingExtraSamples = newExtra;
+                                extraBufferReadPos = 0;
+                            } else {
+                                int remain = pendingExtraSamples.length - extraBufferReadPos;
+                                short[] merged = new short[remain + newExtra.length];
+                                System.arraycopy(pendingExtraSamples, extraBufferReadPos, merged, 0, remain);
+                                System.arraycopy(newExtra, 0, merged, remain, newExtra.length);
+                                pendingExtraSamples = merged;
+                                extraBufferReadPos = 0;
+                            }
+                        }
+                        extraAudioDecoder.releaseOutputBuffer(outIdx, false);
+                        if ((extraDecInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                            extraDecodeDone = true;
+                            break;
+                        }
+                    }
+                }
 
-                                for (int i = 0; i < toMix; i++) {
-                                    float mixed = samples[i] + pendingFaceSamples[faceBufferReadPos + i] * faceVolume;
-                                    samples[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) mixed));
+                if (audioTrackIndex >= 0) {
+                    if (!decodeDone) {
+                        int outIdx = audioDecoder.dequeueOutputBuffer(decInfo, TIMEOUT_US);
+                        if (outIdx >= 0) {
+                            ByteBuffer outBuf = audioDecoder.getOutputBuffer(outIdx);
+
+                            if (decInfo.size > 0 && outBuf != null) {
+                                outBuf.position(decInfo.offset);
+                                outBuf.limit(decInfo.offset + decInfo.size);
+                                ShortBuffer sb = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+                                short[] samples = new short[sb.remaining()];
+                                sb.get(samples);
+
+                                // Apply main volume
+                                for (int i = 0; i < samples.length; i++) {
+                                    float s = samples[i] * mainVolume;
+                                    samples[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) s));
                                 }
 
-                                faceBufferReadPos += toMix;
+                                // Mix face audio
+                                if (useFaceAudio && pendingFaceSamples != null) {
+                                    int mainFrames = samples.length / mainChannels;
+                                    int faceFramesAvailable = (pendingFaceSamples.length - faceBufferReadPos) / faceChannels;
+                                    int toMixFrames = Math.min(mainFrames, faceFramesAvailable);
+
+                                    for (int f = 0; f < toMixFrames; f++) {
+                                        for (int c = 0; c < mainChannels; c++) {
+                                            int mIdx = f * mainChannels + c;
+                                            int fIdx = faceBufferReadPos + (f * faceChannels + (c % faceChannels));
+                                            float mixed = samples[mIdx] + pendingFaceSamples[fIdx] * faceVolume;
+                                            samples[mIdx] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) mixed));
+                                        }
+                                    }
+
+                                    faceBufferReadPos += toMixFrames * faceChannels;
+                                    if (faceBufferReadPos >= pendingFaceSamples.length) {
+                                        pendingFaceSamples = null;
+                                        faceBufferReadPos = 0;
+                                    }
+                                }
+
+                                // Mix extra audio
+                                if (useExtraAudio && pendingExtraSamples != null) {
+                                    int mainFrames = samples.length / mainChannels;
+                                    int extraFramesAvailable = (pendingExtraSamples.length - extraBufferReadPos) / extraChannels;
+                                    int toMixFrames = Math.min(mainFrames, extraFramesAvailable);
+
+                                    for (int f = 0; f < toMixFrames; f++) {
+                                        for (int c = 0; c < mainChannels; c++) {
+                                            int mIdx = f * mainChannels + c;
+                                            int eIdx = extraBufferReadPos + (f * extraChannels + (c % extraChannels));
+                                            float mixed = samples[mIdx] + pendingExtraSamples[eIdx] * extraVolume;
+                                            samples[mIdx] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) mixed));
+                                        }
+                                    }
+
+                                    extraBufferReadPos += toMixFrames * extraChannels;
+                                    if (extraBufferReadPos >= pendingExtraSamples.length) {
+                                        pendingExtraSamples = null;
+                                        extraBufferReadPos = 0;
+                                    }
+                                }
+
+                                processAndEncodeSamples(samples, audioEncoder, sampleRate, channelCount, speedFactor, maxDurationUs, ts, callback, (int) ((initWeight + videoWeight) * 100), audioWeight);
+                            }
+
+                            audioDecoder.releaseOutputBuffer(outIdx, false);
+
+                            if ((decInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                                decodeDone = true;
+                                signalEndOfAudioStream(audioEncoder);
+                            }
+                        }
+                    }
+                } else {
+                    // Drive processing by generating silence if no main audio track exists
+                    if (!decodeDone) {
+                        long currentPts = (totalSamplesEncoded * 1_000_000L) / (sampleRate * channelCount);
+                        if (currentPts >= maxDurationUs) {
+                            decodeDone = true;
+                            signalEndOfAudioStream(audioEncoder);
+                        } else {
+                            // Wait for extra audio data if it's supposed to be there
+                            if (useExtraAudio && pendingExtraSamples == null && !extraDecodeDone) {
+                                try { Thread.sleep(5); } catch (Exception ignored) {}
+                                continue;
+                            }
+                            if (useFaceAudio && pendingFaceSamples == null && !faceDecodeDone) {
+                                try { Thread.sleep(5); } catch (Exception ignored) {}
+                                continue;
+                            }
+
+                            short[] samples = new short[2048]; // approx 23ms silence
+                            int mainFrames = samples.length / mainChannels;
+                            
+                            // Mix face audio (greedy)
+                            if (useFaceAudio && pendingFaceSamples != null) {
+                                int faceFramesAvailable = (pendingFaceSamples.length - faceBufferReadPos) / faceChannels;
+                                int toMixFrames = Math.min(mainFrames, faceFramesAvailable);
+                                for (int f = 0; f < toMixFrames; f++) {
+                                    for (int c = 0; c < mainChannels; c++) {
+                                        int mIdx = f * mainChannels + c;
+                                        int fIdx = faceBufferReadPos + (f * faceChannels + (c % faceChannels));
+                                        samples[mIdx] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) (pendingFaceSamples[fIdx] * faceVolume)));
+                                    }
+                                }
+                                faceBufferReadPos += toMixFrames * faceChannels;
                                 if (faceBufferReadPos >= pendingFaceSamples.length) {
                                     pendingFaceSamples = null;
                                     faceBufferReadPos = 0;
                                 }
                             }
 
-                            // Apply speed/resampling for sync
-                            float audioEffectiveSpeed = speedFactor;
-
-                            if (Math.abs(audioEffectiveSpeed - 1f) > 0.001f) {
-                                samples = resampleAudio(samples, audioEffectiveSpeed, channelCount);
-                            }
-
-                            // Apply Advanced EQ
-                            if (ts.audioEqEnabled) {
-                                samples = applyAudioEQ(samples, ts.audioEqBass, ts.audioEqTreble, sampleRate);
-                            }
-
-                            // 34. Audio Phase Shifting
-                            if (ts.audioPhaseShiftEnabled) {
-                                for (int i = 0; i < samples.length; i++) {
-                                    samples[i] = (short) (-samples[i]);
-                                }
-                            }
-
-                            // Apply effects
-                            if (ts.pitchEnabled && Math.abs(ts.pitch - 1f) > 0.005f) {
-                                samples = applyPitchToSamples(samples, ts.pitch, channelCount);
-                            }
-                            if (ts.spectralNoiseEnabled && ts.spectralNoise > 0.0001f) {
-                                samples = applySpectralNoise(samples, ts.spectralNoise, sampleRate);
-                            }
-                            if (ts.ambientNoiseEnabled && ts.ambientNoiseLevel > 0.0001f) {
-                                samples = applyAmbientNoise(samples, ts.ambientNoiseLevel);
-                            }
-
-                            if (samples.length > 0) {
-                                int inIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
-                                if (inIdx >= 0) {
-                                    ByteBuffer inBuf = audioEncoder.getInputBuffer(inIdx);
-                                    if (inBuf != null) {
-                                        inBuf.clear();
-                                        ByteBuffer pcm = ByteBuffer.allocate(samples.length * 2).order(ByteOrder.LITTLE_ENDIAN);
-                                        pcm.asShortBuffer().put(samples);
-                                        int writeLen = Math.min(pcm.array().length, inBuf.capacity());
-                                        inBuf.put(pcm.array(), 0, writeLen);
-                                        
-                                        long outPts = (totalSamplesEncoded * 1_000_000L) / (sampleRate * channelCount);
-                                        audioEncoder.queueInputBuffer(inIdx, 0, writeLen, outPts, 0);
-                                        totalSamplesEncoded += (writeLen / 2);
-                                        audioFrameCounter++;
-
-                                        if (audioFrameCounter % 20 == 0 || System.currentTimeMillis() - lastAudioProgress > 400) {
-                                            double audioRatio = (maxDurationUs > 0) ? (double) outPts / maxDurationUs : 0.0;
-                                            audioRatio = Math.max(0.0, Math.min(1.0, audioRatio));
-
-                                            int audioPct = (int) ((initWeight + videoWeight) * 100 + audioWeight * 100 * audioRatio);
-                                            int maxAudioPct = (int) ((initWeight + videoWeight + audioWeight) * 100);
-                                            audioPct = Math.max((int) ((initWeight + videoWeight) * 100), Math.min(audioPct, maxAudioPct));
-                                            
-                            callback.onProgress(audioPct, "অডিও:" + audioFrameCounter);
-                            audioFrameCounter++;
-                                            lastAudioProgress = System.currentTimeMillis();
-                                        }
+                            // Mix extra audio (greedy)
+                            if (useExtraAudio && pendingExtraSamples != null) {
+                                int extraFramesAvailable = (pendingExtraSamples.length - extraBufferReadPos) / extraChannels;
+                                int toMixFrames = Math.min(mainFrames, extraFramesAvailable);
+                                for (int f = 0; f < toMixFrames; f++) {
+                                    for (int c = 0; c < mainChannels; c++) {
+                                        int mIdx = f * mainChannels + c;
+                                        int eIdx = extraBufferReadPos + (f * extraChannels + (c % extraChannels));
+                                        float mixed = samples[mIdx] + pendingExtraSamples[eIdx] * extraVolume;
+                                        samples[mIdx] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) mixed));
                                     }
                                 }
+                                extraBufferReadPos += toMixFrames * extraChannels;
+                                if (extraBufferReadPos >= pendingExtraSamples.length) {
+                                    pendingExtraSamples = null;
+                                    extraBufferReadPos = 0;
+                                }
                             }
-                        }
-
-                        audioDecoder.releaseOutputBuffer(outIdx, false);
-
-                        if ((decInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                            decodeDone = true;
-                            int eosIdx = audioEncoder.dequeueInputBuffer(TIMEOUT_US);
-                            if (eosIdx >= 0) {
-                                audioEncoder.queueInputBuffer(eosIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                            }
+                            
+                            processAndEncodeSamples(samples, audioEncoder, sampleRate, channelCount, speedFactor, maxDurationUs, ts, callback, (int) ((initWeight + videoWeight) * 100), audioWeight);
                         }
                     }
                 }
@@ -1321,6 +1636,8 @@ public class VideoProcessorMediaCodec {
             try { if (audioExtractor != null) audioExtractor.release(); } catch (Exception ignored) {}
             try { if (faceAudioDecoder != null) { faceAudioDecoder.stop(); faceAudioDecoder.release(); } } catch (Exception ignored) {}
             try { if (faceAudioExtractor != null) faceAudioExtractor.release(); } catch (Exception ignored) {}
+            try { if (extraAudioDecoder != null) { extraAudioDecoder.stop(); extraAudioDecoder.release(); } } catch (Exception ignored) {}
+            try { if (extraAudioExtractor != null) extraAudioExtractor.release(); } catch (Exception ignored) {}
             try { if (tempVideoExtractor != null) tempVideoExtractor.release(); } catch (Exception ignored) {}
             try { if (finalMuxer != null) { finalMuxer.stop(); finalMuxer.release(); } } catch (Exception ignored) {}
         }
@@ -1884,69 +2201,60 @@ public class VideoProcessorMediaCodec {
     }
 
     private short[] applyAudioEQ(short[] samples, float bassGain, float trebleGain, int sampleRate) {
+        // Reduced gain factor for subtlety
+        float bG = 1.0f + (bassGain - 1.0f) * 0.4f;
+        float tG = 1.0f + (trebleGain - 1.0f) * 0.4f;
         short[] output = new short[samples.length];
         
-        // Simple IIR filters for Bass (Low-shelf) and Treble (High-shelf)
         float dt = 1.0f / sampleRate;
-        float bassRC = 1.0f / (2.0f * (float) Math.PI * 250.0f); // 250Hz shelf
+        float bassRC = 1.0f / (2.0f * (float) Math.PI * 200.0f);
         float bassAlpha = dt / (bassRC + dt);
-        
-        float trebleRC = 1.0f / (2.0f * (float) Math.PI * 4000.0f); // 4kHz shelf
+        float trebleRC = 1.0f / (2.0f * (float) Math.PI * 5000.0f);
         float trebleAlpha = trebleRC / (trebleRC + dt);
         
-        float lastLow = 0;
-        float lastHigh = 0;
-        float lastInput = 0;
-
+        float lastLow = 0, lastHigh = 0, lastInput = 0;
         for (int i = 0; i < samples.length; i++) {
             float in = samples[i];
-            
-            // Bass boost/cut
             float low = lastLow + bassAlpha * (in - lastLow);
             lastLow = low;
-            float bassComponent = low * (bassGain - 1.0f);
-            
-            // Treble boost/cut
             float high = trebleAlpha * (lastHigh + in - lastInput);
             lastInput = in;
             lastHigh = high;
-            float trebleComponent = high * (trebleGain - 1.0f);
-            
-            float out = in + bassComponent + trebleComponent;
-            output[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) out));
+            float out = in + low * (bG - 1.0f) + high * (tG - 1.0f);
+            output[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) (out * 0.95f)));
         }
         return output;
     }
 
     private short[] applySpectralNoise(short[] samples, float noiseLevel, int sampleRate) {
+        // Toned down significantly
+        float adjustedLevel = noiseLevel * 0.2f; 
         short[] output = new short[samples.length];
-        float alpha = (float) (2.0 * Math.PI * 6000.0 / sampleRate);
+        float alpha = (float) (2.0 * Math.PI * 8000.0 / sampleRate);
         alpha = alpha / (alpha + 1.0f);
         float prevInput = 0, prevOutput = 0;
         for (int i = 0; i < samples.length; i++) {
-            float noise = (random.nextFloat() - 0.5f) * 2.0f * noiseLevel * Short.MAX_VALUE;
+            float noise = (random.nextFloat() - 0.5f) * adjustedLevel * Short.MAX_VALUE;
             float filteredNoise = alpha * (prevOutput + noise - prevInput);
             prevInput = noise;
             prevOutput = filteredNoise;
-            float signalEnergy = Math.abs(samples[i]) / (float) Short.MAX_VALUE;
-            float dynamicNoise = filteredNoise * (0.3f + signalEnergy * 0.7f);
-            float result = samples[i] + dynamicNoise;
-            output[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) result));
+            float sig = Math.abs(samples[i]) / (float) Short.MAX_VALUE;
+            float dynamicNoise = filteredNoise * (sig * 0.5f); // Only add noise where there is sound
+            output[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) (samples[i] + dynamicNoise)));
         }
         return output;
     }
 
     private short[] applyAmbientNoise(short[] samples, float noiseLevel) {
+        // Very subtle brownian-like rumble
+        float adjustedLevel = noiseLevel * 0.15f;
         short[] output = new short[samples.length];
         float brownNoise = 0;
         for (int i = 0; i < samples.length; i++) {
-            float white = (random.nextFloat() - 0.5f) * noiseLevel * Short.MAX_VALUE;
-            brownNoise = (brownNoise + white * 0.02f) * 0.98f;
-            brownNoise = Math.max(-0.1f * Short.MAX_VALUE, Math.min(0.1f * Short.MAX_VALUE, brownNoise));
-            float signalStrength = Math.abs(samples[i]) / (float) Short.MAX_VALUE;
-            float adaptiveNoise = brownNoise * (0.3f + signalStrength * 0.7f);
-            float result = samples[i] + adaptiveNoise;
-            output[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) result));
+            float white = (random.nextFloat() - 0.5f) * adjustedLevel * Short.MAX_VALUE;
+            brownNoise = (brownNoise + white * 0.01f) * 0.99f;
+            float sig = Math.abs(samples[i]) / (float) Short.MAX_VALUE;
+            output[i] = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (int) (samples[i] + brownNoise * (0.1f + sig * 0.4f))));
         }
         return output;
     }

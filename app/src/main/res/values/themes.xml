@@ -35,4 +35,7 @@
         <item name="chipCornerRadius">20dp</item>
         <item name="android:textSize">12sp</item>
     </style>
+    <style name="CustomSwitchStyle">
+        <item name="colorControlActivated">@color/colorPrimary</item>
+    </style>
 </resources>

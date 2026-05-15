@@ -24,7 +24,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <!-- ═══════════════════════════════════════════════════════════════ -->
             <!-- HEADER -->
@@ -1655,7 +1655,7 @@
                 </androidx.cardview.widget.CardView>
 
                 <!-- ═══════════════════════════════════════════════════════════════ -->
-                <!-- STEP 6: REACTION FACE (NEW) -->
+                <!-- STEP 6: REACTION FACE -->
                 <!-- ═══════════════════════════════════════════════════════════════ -->
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
@@ -1738,6 +1738,241 @@
 
                             <!-- Include the section layout -->
                             <include layout="@layout/section_reaction_face"/>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <!-- STEP 7: EXTRA AUDIO -->
+                <!-- ═══════════════════════════════════════════════════════════════ -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="@color/card_dark"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Collapsible Header -->
+                        <LinearLayout
+                            android:id="@+id/extraAudioHeader"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="20dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:gravity="center"
+                                android:text="7"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/white"
+                                android:background="@drawable/bg_step_number"/>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🎵 Extra Audio"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"/>
+
+                                <TextView
+                                    android:id="@+id/extraAudioSummary"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="ঐচ্ছিক · ব্যাকগ্রাউন্ড মিউজিক যোগ করুন"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/extraAudioToggle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▼"
+                                android:textSize="14sp"
+                                android:textColor="@color/text_muted"/>
+                        </LinearLayout>
+
+                        <!-- Extra Audio Content (Collapsible) -->
+                        <LinearLayout
+                            android:id="@+id/extraAudioContent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="20dp"
+                            android:paddingBottom="20dp"
+                            android:visibility="gone">
+
+                            <!-- Extra Audio Controls -->
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/swExtraAudio"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Extra Audio চালু করুন"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:layout_marginBottom="16dp"
+                                android:theme="@style/CustomSwitchStyle"/>
+
+                            <LinearLayout
+                                android:id="@+id/extraAudioSection"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+
+                                <!-- Audio Picker Area -->
+                                <LinearLayout
+                                    android:id="@+id/audioPickerArea"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:background="@drawable/bg_drop_zone"
+                                    android:padding="20dp"
+                                    android:gravity="center"
+                                    android:clickable="true"
+                                    android:focusable="true">
+
+                                    <TextView
+                                        android:id="@+id/audioIcon"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="🎼"
+                                        android:textSize="32sp"
+                                        android:layout_marginBottom="8dp"/>
+
+                                    <TextView
+                                        android:id="@+id/audioDropText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="অডিও ফাইল সিলেক্ট করুন"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="12sp"
+                                        android:textStyle="bold"/>
+                                </LinearLayout>
+
+                                <!-- Audio Info Layout (Shown after pick) -->
+                                <LinearLayout
+                                    android:id="@+id/audioInfoLayout"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:background="@drawable/bg_file_info"
+                                    android:padding="12dp"
+                                    android:layout_marginTop="12dp"
+                                    android:gravity="center_vertical"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:layout_width="32dp"
+                                        android:layout_height="32dp"
+                                        android:src="@drawable/ic_info"
+                                        app:tint="@color/colorAccent2"/>
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical"
+                                        android:layout_marginStart="12dp">
+
+                                        <TextView
+                                            android:id="@+id/audioFileName"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="অডিও ফাইল সিলেক্ট করুন"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="12sp"
+                                            android:textStyle="bold"
+                                            android:ellipsize="middle"
+                                            android:singleLine="true"/>
+
+                                        <TextView
+                                            android:id="@+id/audioFileDetail"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="0.00 MB · 0:00"
+                                            android:textColor="@color/text_muted"
+                                            android:textSize="10sp"/>
+                                    </LinearLayout>
+
+                                    <ImageButton
+                                        android:id="@+id/btnRemoveAudio"
+                                        android:layout_width="32dp"
+                                        android:layout_height="32dp"
+                                        android:src="@drawable/ic_close"
+                                        android:background="?attr/selectableItemBackgroundBorderless"
+                                        app:tint="@color/text_muted"/>
+                                </LinearLayout>
+
+                                <!-- Volume Slider -->
+                                <LinearLayout
+                                    android:id="@+id/audioVolumeSection"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:layout_marginTop="16dp"
+                                    android:visibility="gone">
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:layout_marginBottom="8dp">
+
+                                        <TextView
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:text="🔊 অডিও ভলিউম"
+                                            android:textColor="@color/text_muted"
+                                            android:textSize="12sp"/>
+
+                                        <TextView
+                                            android:id="@+id/audioVolumeValue"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="10%"
+                                            android:textColor="@color/colorAccent2"
+                                            android:textSize="12sp"
+                                            android:textStyle="bold"/>
+                                    </LinearLayout>
+
+                                    <com.google.android.material.slider.Slider
+                                        android:id="@+id/slExtraAudioVolume"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:valueFrom="1"
+                                        android:valueTo="100"
+                                        android:value="10"
+                                        android:stepSize="1"
+                                        app:trackColorActive="@color/colorPrimary"
+                                        app:trackColorInactive="@color/text_muted"
+                                        app:thumbColor="@color/colorPrimary"/>
+                                </LinearLayout>
+
+                            </LinearLayout>
 
                         </LinearLayout>
                     </LinearLayout>

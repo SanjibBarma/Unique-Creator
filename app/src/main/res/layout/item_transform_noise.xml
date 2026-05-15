@@ -59,7 +59,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:stepSize="0.005"
-        android:value="0.015"
+        android:value="0.010"
         android:valueFrom="0.005"
         android:valueTo="0.05"
         app:thumbColor="@color/colorPrimary"

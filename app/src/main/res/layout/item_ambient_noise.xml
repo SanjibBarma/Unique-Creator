@@ -64,7 +64,7 @@
             android:layout_marginTop="8dp"
             android:valueFrom="0.001"
             android:valueTo="0.02"
-            android:value="0.005"
+            android:value="0.002"
             android:stepSize="0.001"
             app:trackColorActive="@color/colorPrimary"
             app:trackColorInactive="@color/text_muted"

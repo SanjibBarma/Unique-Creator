@@ -277,6 +277,19 @@ public class TransformSettings implements Serializable {
     // Corner radius percentage (0=square, 50=circle)
     public int reactionFaceCornerRadius = 100;
 
+    // ════════════════════════════════════════════════════════════════════
+    // ★★★ EXTRA AUDIO BACKGROUND ★★★
+    // ════════════════════════════════════════════════════════════════════
+
+    // Enable extra audio background
+    public boolean extraAudioEnabled = false;
+
+    // Extra audio URI (stored as String for Serializable)
+    public String extraAudioUri = null;
+
+    // Extra audio volume (1-100%)
+    public int extraAudioVolume = 10;
+
 // ════════════════════════════════════════════════════════════════════
 // HELPER METHODS FOR REACTION FACE
 // ════════════════════════════════════════════════════════════════════
@@ -286,6 +299,13 @@ public class TransformSettings implements Serializable {
      */
     public boolean hasReactionFace() {
         return reactionFaceEnabled && reactionFaceUri != null && !reactionFaceUri.isEmpty();
+    }
+
+    /**
+     * Check if extra audio is enabled and has valid URI
+     */
+    public boolean hasExtraAudio() {
+        return extraAudioEnabled && extraAudioUri != null && !extraAudioUri.isEmpty();
     }
 
     /**

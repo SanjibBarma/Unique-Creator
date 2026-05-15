@@ -195,6 +195,17 @@ public class MainActivity extends BaseActivity {
     private Bitmap faceVideoThumbnailBitmap;
     private int selectedFacePosition = 0; // 0=TopLeft, 1=TopRight, 2=BottomLeft, 3=BottomRight
 
+    // Extra Audio Section
+    private LinearLayout extraAudioHeader, extraAudioContent, extraAudioSection, audioInfoLayout, audioVolumeSection;
+    private TextView extraAudioToggle, extraAudioSummary, audioDropText, audioFileName, audioFileDetail, audioVolumeValue;
+    private SwitchCompat swExtraAudio;
+    private LinearLayout audioPickerArea;
+    private ImageButton btnRemoveAudio;
+    private Slider slExtraAudioVolume;
+    private boolean extraAudioExpanded = false;
+    private Uri selectedExtraAudioUri;
+    private ActivityResultLauncher<Intent> extraAudioPickerLauncher;
+
     // Launcher
     private ActivityResultLauncher<Intent> faceVideoPickerLauncher;
 
@@ -260,6 +271,25 @@ public class MainActivity extends BaseActivity {
                         selectedFaceVideoUri = result.getData().getData();
                         if (selectedFaceVideoUri != null) {
                             loadFaceVideoInfo();
+                        }
+                    }
+                }
+        );
+
+        // Extra Audio Picker
+        extraAudioPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        selectedExtraAudioUri = result.getData().getData();
+                        if (selectedExtraAudioUri != null) {
+                            try {
+                                final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+                                getContentResolver().takePersistableUriPermission(selectedExtraAudioUri, takeFlags);
+                            } catch (SecurityException e) {
+                                Log.w(TAG, "Could not take persistable permission", e);
+                            }
+                            loadExtraAudioInfo();
                         }
                     }
                 }
@@ -427,6 +457,25 @@ public class MainActivity extends BaseActivity {
         chipFacePosTopRight = findViewById(R.id.chipFacePosTopRight);
         chipFacePosBottomLeft = findViewById(R.id.chipFacePosBottomLeft);
         chipFacePosBottomRight = findViewById(R.id.chipFacePosBottomRight);
+
+        // ═══════════════════════════════════════════════════════════════
+// EXTRA AUDIO SECTION
+// ═══════════════════════════════════════════════════════════════
+        extraAudioHeader = findViewById(R.id.extraAudioHeader);
+        extraAudioContent = findViewById(R.id.extraAudioContent);
+        extraAudioToggle = findViewById(R.id.extraAudioToggle);
+        extraAudioSummary = findViewById(R.id.extraAudioSummary);
+
+        swExtraAudio = findViewById(R.id.swExtraAudio);
+        extraAudioSection = findViewById(R.id.extraAudioSection);
+        audioPickerArea = findViewById(R.id.audioPickerArea);
+        audioInfoLayout = findViewById(R.id.audioInfoLayout);
+        audioFileName = findViewById(R.id.audioFileName);
+        audioFileDetail = findViewById(R.id.audioFileDetail);
+        btnRemoveAudio = findViewById(R.id.btnRemoveAudio);
+        audioVolumeSection = findViewById(R.id.audioVolumeSection);
+        audioVolumeValue = findViewById(R.id.audioVolumeValue);
+        slExtraAudioVolume = findViewById(R.id.slExtraAudioVolume);
     }
 
     private void initTransformViews() {
@@ -828,11 +877,28 @@ public class MainActivity extends BaseActivity {
             });
         }
 
-// Corner radius slider
-        if (slFaceCornerRadius != null && faceCornerValue != null) {
-            faceCornerValue.setText((int) slFaceCornerRadius.getValue() + "%");
-            slFaceCornerRadius.addOnChangeListener((slider, value, fromUser) -> {
-                faceCornerValue.setText((int) value + "%");
+// Extra Audio Picker
+        if (audioPickerArea != null) {
+            audioPickerArea.setOnClickListener(v -> {
+                if (swExtraAudio != null && swExtraAudio.isChecked()) {
+                    openExtraAudioPicker();
+                } else {
+                    Toast.makeText(this, "প্রথমে Extra Audio চালু করুন", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+// Remove extra audio
+        if (btnRemoveAudio != null) {
+            btnRemoveAudio.setOnClickListener(v -> removeExtraAudio());
+        }
+
+// Volume slider
+        if (slExtraAudioVolume != null && audioVolumeValue != null) {
+            audioVolumeValue.setText((int) slExtraAudioVolume.getValue() + "%");
+            slExtraAudioVolume.addOnChangeListener((slider, value, fromUser) -> {
+                audioVolumeValue.setText((int) value + "%");
+                updateExtraAudioSummary();
             });
         }
 
@@ -891,6 +957,11 @@ public class MainActivity extends BaseActivity {
         }
         if (swJunkData != null) {
             swJunkData.setOnCheckedChangeListener((b, c) -> updateTransformCount());
+        }
+
+        // Extra Audio Toggle
+        if (extraAudioHeader != null) {
+            extraAudioHeader.setOnClickListener(v -> toggleExtraAudioSection());
         }
     }
 
@@ -1743,6 +1814,13 @@ public class MainActivity extends BaseActivity {
         ts.reactionFacePosition = selectedFacePosition;
         ts.reactionFaceSize = slFaceVideoSize != null ? (int) slFaceVideoSize.getValue() : 10;
         ts.reactionFaceCornerRadius = slFaceCornerRadius != null ? (int) slFaceCornerRadius.getValue() : 100;
+
+        // ═══════════════════════════════════════════════════════════════
+// EXTRA AUDIO
+// ═══════════════════════════════════════════════════════════════
+        ts.extraAudioEnabled = swExtraAudio != null && swExtraAudio.isChecked() && selectedExtraAudioUri != null;
+        ts.extraAudioUri = selectedExtraAudioUri != null ? selectedExtraAudioUri.toString() : null;
+        ts.extraAudioVolume = slExtraAudioVolume != null ? (int) slExtraAudioVolume.getValue() : 10;
     }
 
     private void startProcessing() {
@@ -1865,6 +1943,14 @@ public class MainActivity extends BaseActivity {
         reactionFaceExpanded = false;
         if (reactionFaceContent != null) reactionFaceContent.setVisibility(View.GONE);
         if (reactionFaceToggle != null) reactionFaceToggle.setText("▼");
+
+        // Reset Extra Audio
+        if (swExtraAudio != null) swExtraAudio.setChecked(false);
+        removeExtraAudio();
+        if (slExtraAudioVolume != null) slExtraAudioVolume.setValue(10);
+        extraAudioExpanded = false;
+        if (extraAudioContent != null) extraAudioContent.setVisibility(View.GONE);
+        if (extraAudioToggle != null) extraAudioToggle.setText("▼");
 
         updateOutputSummary();
         updateWatermarkSummary();
@@ -2096,6 +2182,156 @@ public class MainActivity extends BaseActivity {
         } else {
             reactionFaceSummary.setText("ঐচ্ছিক · আপনার ফেস ভিডিও ওভারলে করুন");
             reactionFaceSummary.setTextColor(ContextCompat.getColor(this, R.color.text_muted));
+        }
+
+        updateProcessSummary();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+// EXTRA AUDIO METHODS
+// ═══════════════════════════════════════════════════════════════
+
+    private void toggleExtraAudioSection() {
+        extraAudioExpanded = !extraAudioExpanded;
+        if (extraAudioContent != null) {
+            extraAudioContent.setVisibility(extraAudioExpanded ? View.VISIBLE : View.GONE);
+            if (extraAudioExpanded) {
+                extraAudioContent.setAlpha(0f);
+                extraAudioContent.animate().alpha(1f).setDuration(300).start();
+            }
+        }
+        if (extraAudioToggle != null) {
+            extraAudioToggle.setText(extraAudioExpanded ? "▲" : "▼");
+        }
+    }
+
+    private void applyExtraAudioEnabled(boolean enabled) {
+        float alpha = enabled ? 1.0f : 0.5f;
+        if (audioPickerArea != null) audioPickerArea.setAlpha(alpha);
+        if (audioVolumeSection != null) audioVolumeSection.setAlpha(alpha);
+        if (slExtraAudioVolume != null) slExtraAudioVolume.setEnabled(enabled);
+    }
+
+    private void openExtraAudioPicker() {
+        if (!PermissionHelper.hasPermissions(this)) {
+            Toast.makeText(this, "প্রথমে Permission দিন", Toast.LENGTH_SHORT).show();
+            checkPermissions();
+            return;
+        }
+
+        // ACTION_GET_CONTENT shows a broad list of audio files from all storage locations
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("audio/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        
+        try {
+            extraAudioPickerLauncher.launch(Intent.createChooser(intent, "অডিও ফাইল সিলেক্ট করুন"));
+        } catch (Exception e) {
+            // Standard fallback
+            Intent fallback = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            fallback.addCategory(Intent.CATEGORY_OPENABLE);
+            fallback.setType("audio/*");
+            fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            extraAudioPickerLauncher.launch(fallback);
+        }
+    }
+
+    private void loadExtraAudioInfo() {
+        if (selectedExtraAudioUri == null) return;
+
+        String fileName = "Selected Audio";
+        long fileSize = 0;
+        String durationFormatted = "0:00";
+
+        try {
+            // Improved display name fetching
+            try (Cursor cursor = getContentResolver().query(selectedExtraAudioUri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    int sizeIdx = cursor.getColumnIndex(OpenableColumns.SIZE);
+                    if (nameIdx >= 0) {
+                        String name = cursor.getString(nameIdx);
+                        if (name != null && !name.isEmpty()) fileName = name;
+                    }
+                    if (sizeIdx >= 0) fileSize = cursor.getLong(sizeIdx);
+                }
+            }
+
+            if (audioFileName != null) audioFileName.setText(fileName);
+            if (audioDropText != null) audioDropText.setText(fileName);
+
+            // Get duration
+            MediaMetadataRetriever retriever = null;
+            try {
+                retriever = new MediaMetadataRetriever();
+                retriever.setDataSource(this, selectedExtraAudioUri);
+                String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+                if (durationStr != null) {
+                    long durationMs = Long.parseLong(durationStr);
+                    long s = TimeUnit.MILLISECONDS.toSeconds(durationMs) % 60;
+                    long m = TimeUnit.MILLISECONDS.toMinutes(durationMs);
+                    durationFormatted = String.format(Locale.US, "%d:%02d", m, s);
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Duration extraction failed", e);
+            } finally {
+                if (retriever != null) {
+                    try { retriever.release(); } catch (Exception ignored) {}
+                }
+            }
+
+            if (audioFileDetail != null) {
+                String detail = formatFileSize(fileSize) + " · " + durationFormatted;
+                audioFileDetail.setText(detail);
+            }
+
+            // Update UI
+            if (audioPickerArea != null) audioPickerArea.setVisibility(View.GONE);
+            if (audioInfoLayout != null) {
+                audioInfoLayout.setVisibility(View.VISIBLE);
+                audioInfoLayout.setAlpha(0f);
+                audioInfoLayout.animate().alpha(1f).setDuration(300).start();
+            }
+            if (audioVolumeSection != null) {
+                audioVolumeSection.setVisibility(View.VISIBLE);
+                audioVolumeSection.setAlpha(0f);
+                audioVolumeSection.animate().alpha(1f).setDuration(300).setStartDelay(100).start();
+            }
+
+            updateExtraAudioSummary();
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading audio info", e);
+            Toast.makeText(this, "Audio লোড ব্যর্থ", Toast.LENGTH_SHORT).show();
+            // Even if it fails, try to show the layout with whatever we have
+            if (audioFileName != null) audioFileName.setText(fileName);
+        }
+    }
+
+    private void removeExtraAudio() {
+        selectedExtraAudioUri = null;
+        if (audioInfoLayout != null) audioInfoLayout.setVisibility(View.GONE);
+        if (audioVolumeSection != null) audioVolumeSection.setVisibility(View.GONE);
+        if (audioPickerArea != null) audioPickerArea.setVisibility(View.VISIBLE);
+        updateExtraAudioSummary();
+    }
+
+    private void updateExtraAudioSummary() {
+        if (extraAudioSummary == null) return;
+
+        boolean enabled = swExtraAudio != null && swExtraAudio.isChecked();
+        boolean hasAudio = selectedExtraAudioUri != null;
+
+        if (enabled && hasAudio) {
+            int volume = slExtraAudioVolume != null ? (int) slExtraAudioVolume.getValue() : 10;
+            extraAudioSummary.setText("✓ Background Audio ON · " + volume + "% Volume");
+            extraAudioSummary.setTextColor(ContextCompat.getColor(this, R.color.colorAccent2));
+        } else if (enabled) {
+            extraAudioSummary.setText("অডিও ফাইল সিলেক্ট করুন");
+            extraAudioSummary.setTextColor(ContextCompat.getColor(this, R.color.text_muted));
+        } else {
+            extraAudioSummary.setText("ঐচ্ছিক · ব্যাকগ্রাউন্ড মিউজিক যোগ করুন");
+            extraAudioSummary.setTextColor(ContextCompat.getColor(this, R.color.text_muted));
         }
 
         updateProcessSummary();
